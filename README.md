@@ -298,7 +298,7 @@ skipped.
 # Limitations
 Some known limitations of the macro processor:
 
-1. Block comments using **/***...*/** that span multiple lines inside a macro definition do not appear in the expanded
+1. Block comments using `/* comment */` that span multiple lines inside a macro definition do not appear in the expanded
 macro output. Single line comments using those delimiters will appear in the expanded output.
 2. Macro definitions may not appear inside other macro definitions. Macro invocations may be nested to any level
 but must not be recursive (e.g. a macro must not invoke itself directly or through other macros).
