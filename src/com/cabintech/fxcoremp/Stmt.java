@@ -7,28 +7,75 @@ public class Stmt {
 	private String cmnt = "";
 	private int lineNum;
 	private String fileName;
+	private boolean isBlockCommentStart = false;
+	private boolean isBlockCommentEnd = false;
+	private boolean ignore = false; // Ignore this statement for any processing purposes
 	
 	public Stmt(String line, int lineNum, String fileName) {
+		this(line, lineNum, fileName, true); // Default is to parse the input line
+	}
+	
+	public Stmt(String line, int lineNum, String fileName, boolean parse) {
 
 		this.lineNum = lineNum;
 		this.fileName = fileName;
 		this.fullText = line;
 		
+		text = fullText; // By default the statement is all the raw text with no comment
+		cmnt = "";
+		
+		if (!parse) {
+			return; // Do no processing of this line, this is a way to carry a simple string as a Stmt object
+		}
+		
 		// very simplistic comment removal
-		int i = fullText.indexOf(';');
+		
+		// First look for C-style block comments, the assembler makes them the highest priority,
+		// then can even start or end inside a line comment and must be honored. E.g.
+		//    some text ; more text /* start of comment
+		//    ...more comment...
+		//    */
+		
+		int i = text.indexOf("/*"); // Marks start of comment in any context it occurs
+		int j = text.indexOf("*/"); // May start and end on the same line
 		if (i>=0) {
-			text = Util.jsSubstring(fullText, 0, i);
-			cmnt = Util.jsSubstring(fullText, i);
+			// A block comment starts on this line
+			if (j>0) {
+				// and ends on this line, so just remove it
+				cmnt = Util.jsSubstring(text, i, j+2);
+				text = Util.jsSubstring(text, 0, i) + Util.jsSubstring(fullText, j+2); 
+			}
+			else {
+				// and ends on some future line. Remove all to the right of it and flag this as start of a block comment
+				cmnt = Util.jsSubstring(text, i);
+				text = Util.jsSubstring(text, 0, i); // There may be text before this that should be processed normally
+				isBlockCommentStart = true;
+			}
+		}
+		else {
+			// No block start, but could be a block end
+			if (j>=0) {
+				cmnt = Util.jsSubstring(text, 0, j+2);
+				text = Util.jsSubstring(text, j+2); // Keep everything after the end marker, could be code there
+				isBlockCommentEnd = true;
+			}
+		}
+		
+		// Now look for line comments
+		
+		i = text.indexOf(';');
+		if (i>=0) {
+			text = Util.jsSubstring(text, 0, i);
+			if (!isBlockCommentEnd && !isBlockCommentStart) cmnt = Util.jsSubstring(text, i);
 		}
 		else { // No ; comment
-			i = fullText.indexOf("//");
+			//TODO: Remove this if FXCore asm does not support this comment style
+			i = text.indexOf("//"); // C-style line comment
 			if (i>=0) {
-				text = Util.jsSubstring(fullText, 0, i);
-				cmnt = Util.jsSubstring(fullText, i);
+				text = Util.jsSubstring(text, 0, i);
+				if (!isBlockCommentEnd && !isBlockCommentStart) cmnt = Util.jsSubstring(text, i);
 			}
-			else { // No comments of any kind
-				text = fullText;
-				cmnt = "";
+			else { // No line comment
 			}
 		}
 		
@@ -61,5 +108,26 @@ public class Stmt {
 	
 	public String getComment() {
 		return cmnt;
+	}
+	
+	public boolean isBlockCommentStart() {
+		return isBlockCommentStart;
+	}
+	
+	public boolean isBlockCommentEnd() {
+		return isBlockCommentEnd;
+	}
+	
+	public void setIgnore(boolean ignore) {
+		this.ignore = ignore;
+	}
+	
+	public boolean isIgnore() {
+		return ignore;
+	}
+	
+	public void removeComment() {
+		cmnt = "";
+		fullText = text;
 	}
 }

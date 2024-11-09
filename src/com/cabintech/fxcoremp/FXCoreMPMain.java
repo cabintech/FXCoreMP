@@ -137,16 +137,25 @@ public class FXCoreMPMain {
 			boolean inDefine = false;
 			boolean inIf = false;
 			boolean ifCondition = false;
+			Stmt blockCommentStartStmt = null; // Statement that started a block comment
 			List<Stmt> macroLines = new ArrayList<Stmt>();
 			for (String inLine: srcLines) {
+				boolean omitOutput = false; // Do not write the current statement to the output stream
 				lineNum++;
 				SourceContext.atLine(lineNum);
 				Stmt stmt = new Stmt(inLine, lineNum, inFile.getName());
 				String stmtText = stmt.getText().replaceAll("\t"," ").trim(); // Comments removed, tabs converted to spaces, trimmed
 				
-				// End of a multi-line macro definition?
-				//if (inDefine && stmt.getFullText().length()==0) {
-				if (inDefine && stmtText.startsWith("$endmacro")) {
+				// If we are in a multiline comment, just output it and skip all processing. This takes
+				// precedence over all other source code processing.
+				
+				if (blockCommentStartStmt != null) {
+					// This line is part of a block comment, ignore it for processing purposes.
+					// Do nothing, just output as usual below.
+					stmt.setIgnore(true); 
+				}
+				
+				else if (inDefine && stmtText.startsWith("$endmacro")) {
 					Macro m = new Macro(macroLines);
 					String macroName = m.getName();
 					if (macroMap.containsKey(macroName)) {
@@ -155,25 +164,25 @@ public class FXCoreMPMain {
 					macroMap.put(macroName, m);
 					inDefine = false;
 					macroLines.clear();
-					continue; // Nothing to output for this line
+					omitOutput = true; // Nothing to output for this line
 				}
 				
 				// Accumulating lines of a multi-line macro?
-				if (inDefine) {
+				else if (inDefine) {
 					macroLines.add(stmt);
-					continue; // Nothing to output for a macro definition
+					omitOutput = true; // Nothing to output for a macro definition
 				}
 				
-				if (stmtText.startsWith("$endif")) { // End of a $if condition
+				else if (stmtText.startsWith("$endif")) { // End of a $if condition
 					inIf = false;
-					continue; // Nothing to output
+					omitOutput = true; // Nothing to output
 				}
 				
-				if (inIf && ifCondition==false) {
-					continue; // Skip lines in FALSE $if block
+				else if (inIf && ifCondition==false) {
+					omitOutput = true; // Skip lines in FALSE $if block
 				}
 				
-				if (stmtText.startsWith("$if(")) {
+				else if (stmtText.startsWith("$if(")) {
 					// Condition section '$if(envname=xxx)'
 					if (inIf) throw new Exception("Nested $if statements are not supported at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 					
@@ -193,13 +202,13 @@ public class FXCoreMPMain {
 					if (!operator) {
 						ifCondition = !ifCondition; // Invert for "!=" operator
 					}
-					continue; // Do not output the $if statement itself
+					omitOutput = true; // Do not output the $if statement itself
 				}
 				
 				//-----------------------------------------
 				// $include
 				//-----------------------------------------
-				if (stmtText.startsWith("$include ")) {
+				else if (stmtText.startsWith("$include ")) {
 					if (stmtText.length() < 10) {
 						throw new Exception("Invalid $include statement, no file specified");
 					}
@@ -210,7 +219,7 @@ public class FXCoreMPMain {
 						File incFile = new File(sourceDir, incFileName);
 						processFilePass1(incFile, writer, includedFiles);
 					}
-					continue; // Nothing to write for this input line, just continue with next line
+					omitOutput = true; // Nothing to write for this input line, just continue with next line
 				}
 				
 				//-----------------------------------------
@@ -222,7 +231,7 @@ public class FXCoreMPMain {
 						macroLines.clear();
 						inDefine = true;
 						macroLines.add(stmt);  // Add first line of macro
-						continue; // Do not output macro definition lines
+						omitOutput = true; // Do not output macro definition lines
 					}
 					else {
 						// Single line macro definition
@@ -235,7 +244,7 @@ public class FXCoreMPMain {
 							throw new Exception("Macro name '"+m.getName()+"' is already defined. Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 						}
 						macroMap.put(macroName, m);
-						continue; // Do not output macro definition lines
+						omitOutput = true; // Do not output macro definition lines
 					}
 				}
 				
@@ -250,13 +259,34 @@ public class FXCoreMPMain {
 						throw new Exception("Set statement invalid expression syntax in '"+stmtText+"' . Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 					}
 					envMap.put(parts[0].trim().toLowerCase(), parts[1].trim()); // Store (or override) in env map
-					continue; // Do not output the $set statement
+					omitOutput = true; // Do not output the $set statement
 				}
 				//-----------------------------------------
 				// Output the current line
 				//-----------------------------------------
-
-				writer.add(stmt);
+				
+				// If this line ends a block comment, output the comment ender and then process (output)
+				// the rest of this line normally.
+				if (stmt.isBlockCommentEnd()) {
+					blockCommentStartStmt = null; // Leaving multi-line comment block
+					Stmt cmtEnd = new Stmt(stmt.getComment(), lineNum, inFile.getName(), false);
+					cmtEnd.setIgnore(true);
+					stmt.removeComment(); // Original comment starter is now a duplicate, so remove it
+					writer.add(cmtEnd); // Emit block comment end as an ignored line
+				}
+				
+				// Output the current line unless it is to be omitted
+				if (!omitOutput) writer.add(stmt);
+				
+				// If this line began a block comment, process and output the non-comment part normally, 
+				// then output the comment starter, and skip all future lines until we find the end-block marker.
+				if (stmt.isBlockCommentStart()) {
+					blockCommentStartStmt = stmt; // Note we are in a multi-line block comment section
+					Stmt cmtStart = new Stmt(stmt.getComment(), lineNum, inFile.getName(), false);
+					cmtStart.setIgnore(true);
+					stmt.removeComment(); // Original comment ender is now a duplicate, so remove it
+					writer.add(cmtStart); // Emit block comment start as an ignored line
+				}
 			}
 			
 			if (inDefine) {

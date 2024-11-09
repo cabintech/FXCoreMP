@@ -254,6 +254,12 @@ public class Macro {
 		List<String> expanded = new ArrayList<>(); // Expanded macro lines output of this method
 		for (Stmt stmt: sourceLines) {
 			
+			if (stmt.isIgnore()) {
+				// Do not process this line (part of a block comment), just copy it to the output
+				expanded.add(stmt.getFullText());
+				continue;
+			}
+			
 //OBSOLETE -- older macro invocation syntax			
 //			
 //			// Macro form: ${mac-name(args)}
