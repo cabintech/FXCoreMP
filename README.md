@@ -15,11 +15,11 @@ in text substitution. There is some limited conditional processing (see $set and
 The FXCoreMP macro language supports the following statements:
 | Syntax                                         | Description            |
 |------------------------------------------------|------------------------|
-| $macro <name>(argname1,argname2,...)<br>$endmacro | Macro definition       |
+| $macro name(argname1,argname2,...)<br>$endmacro | Macro definition       |
 | $<name>(arg1,arg2,...)                         | Macro invocation       |
-| $include <filename><br>#include <filename>        | Imbed a file           |
-| $set <envparm>=value                           | Set env value          |
-| $if <envparm>=<value>                          | Conditional processing |
+| $include filename<br>#include filename        | Imbed a file           |
+| $set envparm=value                           | Set env value          |
+| $if envparm=<value>                          | Conditional processing |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
