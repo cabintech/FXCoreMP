@@ -115,7 +115,7 @@ $endmacro
 Note the use of **${:unique}** to make the jump target and the corresponding label unique
 so this macro can be used multiple times in the same source (or included) file. Since the
 substituted value is across all macros and all invocations, it is OK if two different macros
-use the same generated label names (e.g. another macro could define a label "sub_ok_${:unique}"
+use the same generated label names (e.g. another macro could define a label <pre>"sub_ok_${:unique}"</pre>
 and it would not create any conflict with the macro above).
 
 ## Macro Invocation (Evaluation)
