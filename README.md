@@ -180,13 +180,13 @@ multiple use cases but a common use is to conditionally include (or exclude) cod
 value passed into the preprocessor at compile time. For example, it might be useful to include
 extra debug code for development builds, but exclude that code when assembling for production distribution.
 
-These statements operate on macro 'environment' variables defined either by $set statements or values passed
+These statements operate on macro 'environment' variables defined either by **$set** statements or values passed
 on the command line. (Not to be confused with operating system environment variables, these are
 specific to the macro processing system). Macro environment variables have a name and value. If a variable has not been defined
-(e.g. no $set statement has created it, and it was not specified on the command line) then it's value
+(e.g. no **$set** statement has created it, and it was not specified on the command line) then it's value
 is assumed to be an empty string. Macro environment names and values are *case-insensitive*.
 
-The $set statement has the following syntax:
+The **$set** statement has the following syntax:
 
 ```
 $set <name>=<value>
