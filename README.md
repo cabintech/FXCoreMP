@@ -22,7 +22,7 @@ The FXCoreMP macro language supports the following statements:
 | ```$<name>(arg1,arg2,...)```                         | Macro invocation       |
 | ```$include <filename>```<br>```#include <filename>```  | Imbed a file           |
 | ```$set <envparm>=<value>```                           | Set env value          |
-| ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```<br>$endif```     | Conditional processing |
+| ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     | Conditional processing |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
