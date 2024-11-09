@@ -493,18 +493,21 @@ public class Macro {
 
 		// Build map of arg names to values
 		Map<String,String> argNameValueMap = new HashMap<>();
-		
+
+		int numPosArgs = 0;
+		int numNamArgs = 0;
 		for (int argNum=0; argNum<args.length; argNum++) {
 			String argText = args[argNum];
-			// Support named and positional args. All args should be one or the other but
-			//TODO not currently enforced.
+			// Support named and positional args. All args must be one or the other but not mixed.
 			if (argText.indexOf('=') < 0) {
 				// No equal signs in the arg, so assume positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
+				if (numNamArgs > 0) throw new Exception("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 				String argName = m.getArgNames().get(argNum);	// Name from macro definition
 				argNameValueMap.put(argName, argText.trim()); 	// Value is the argument text
 			}
 			else {
 				// Named argument of the form 'argname=argvalue'.
+				if (numPosArgs > 0) throw new Exception("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 				int eqPos = argText.indexOf('=');
 				String argName = Util.jsSubstring(argText, 0, eqPos).trim(); // Name is left of equal
 				String argValue= Util.jsSubstring(argText, eqPos+1).trim();  // Value is right of equal (can be empty string)

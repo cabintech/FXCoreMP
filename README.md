@@ -132,7 +132,7 @@ This will correctly substitute the PI macro expansion, followed by the letter "R
 ```
 3.14R
 ```
-
+####Positional and Named Argument Values
 Macro argument values may be supplied in a positional or named format. Most common is the positional
 form where the supplied values are applied to the macro's argument list in the order they appear in
 the macro definition. This good when there are few arguments and their usage is clear, such as:
@@ -151,7 +151,9 @@ $CALC_DELAY(r0, r6, r8, r9, r12)
 
 It would be necessary to find and read the macro definition to have any idea
 about what the arguments are, and if the correct registers are being used. In this case the code
-can be made more readable by using named arguments in the invocation:
+can be made more readable by using named arguments in the invocation. A named argument is the
+argument name (from the macro definition) followed by the "=" character, and then the 
+argument value.
 
 ```
 $CALC_DELAY(buffer_base=r0, offset=r6, cv=r8, tempReg1=r9, tempReg2=r12)
@@ -165,6 +167,12 @@ following is exactly equivalent to the example above:
 $CALC_DELAY(tempReg1=r9, tempReg2=r12, offset=r6, buffer_base=r0, cv=r8)
 ```
 
-Currently the macro processor allows a mix of named and positional values in a macro
-invocation, but it is strongly discouraged as it can have unintended results. A future version
-may disallow mixed form invocations.
+Argument names must match the names used in the macro definition, but are *not* case sensitive.
+Positional and named arguments cannot be mixed in the same macro invocation.
+
+# More Info
+
+See these additional pages for more information:
+
+[How to run the FXCoreMP macro processor](usage.md)
+[Examples](examples.md)
