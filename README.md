@@ -6,14 +6,7 @@ how the C/C++ preprocessor adds macro capabilities to C and C++ language files. 
 of this processor, an [attempt was made to leverage the C preprocessor](cpp.md) for this purpose. Shortcomings of that
 approach inspired the creation of this preprocessor specifically designed for the FXCore assembly language.
 
-*Why?* [^1]
-
-[^1]: Discuss diff with FXCore macro libraries, use of pure-text substitution, ability to reference
-labels outside the macro, conditional processing, goal to allow more HLL (High Level Language) type constructs. Note also this 
-processor does no type checking, there is no inherent notion of "input" or "output" arguments like
-FXCore libraries -- everything is just text. Note that (with recent releases) it can be better to use
-FXCore ".equ" statements instead of simple inline macros. ".equ" does real expression evaluation at compile time
-with lots of useful math and bitwise operators.
+*[Why?](why.md)*
 
 This processor reads an FXCore assembler source file (usually named "x.fxc") and writes an output file which is
 a modified version of the input. Modifications are made by the processing of macro statements in the source
