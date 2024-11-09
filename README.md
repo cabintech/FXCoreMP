@@ -231,7 +231,7 @@ java ... -Edebug=true
 
 will cause the macro to expand to the debug code, otherwise it will expand to a single comment line.
 
-Currently, nested $if statements are not supported.
+Currently, nested **$if** statements are not supported.
 
 # INCLUDE Statement
 
