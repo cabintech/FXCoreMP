@@ -30,7 +30,7 @@ The macro definition may specify one or more argument name. Each argument must b
 invocation (either by name, or by position -- see the invocation section below). Macro names follow the usual rules
 of variable naming (must start with a letter, cannot contain whitespace or other special characters).
 
->$macro MS\_TO\_SAMPLES\_48K(msec)	((${msec}/1000)/(1/48000))
+>$macro MSTOSAMPLES48K(msec)	((${msec}/1000)/(1/48000))
 
 This macro is defined to have one argument named "msec". The value of an argument supplied on an invocation will
 be substituted into the macro text when it is found enclosed in "${" and "}" as shown above. (Note that unlike
