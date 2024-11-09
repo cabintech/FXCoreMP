@@ -12,6 +12,8 @@ a modified version of the input. Modifications are made by the processing of mac
 file. The FXCoreMP processor is a textual substitution system, it does not evaluate mathematical expressions or
 perform higher level functions. Although the macro nesting and arguments can be elaborate, ultimately it results
 in text substitution. There is some limited conditional processing (see $set and $if statements).
+
+Where possible FXCoreMP treats macro names, argument names, IF conditions, etc. as *case-insensitive*.
  
 The FXCoreMP macro language supports the following statements:
 | Syntax                                         | Description            |
@@ -80,7 +82,8 @@ $endmacro
 ## Macro Invocation (Evaluation)
 
 A macro invocation is indicated in the source text by a "$" character followed by the macro name, 
-optionally followed by a comma-delimited list of values for the macro arguments. For example:
+optionally followed by a comma-delimited list of values for the macro arguments. Macro
+names are *case-insensitive*. For example:
 
 ```
 $MULT_16(r0, r1, r8)
@@ -171,7 +174,7 @@ Positional and named arguments cannot be mixed in the same macro invocation.
 
 ## SET/IF Conditional Processing
 
-The $set and $if statements (along with command-line parameters) allow for conditional inclusion/exclusion of
+The **$set** and **$if** statements (along with command-line parameters) allow for conditional inclusion/exclusion of
 blocks of lines from the source file. These statements cannot be used inside a macro. There are
 multiple use cases but a common use is to conditionally include (or exclude) code based on some
 value passed into the preprocessor at compile time. For example, it might be useful to include
