@@ -94,6 +94,9 @@ public class FXCoreMPMain {
 	public static SafeMap envMap = new SafeMap();
 	
 	public static SourceContext context = new SourceContext();
+	
+	public static File srcFile = null;
+	public static File outFile = null;
 
 
 	public FXCoreMPMain() {
@@ -278,8 +281,8 @@ public class FXCoreMPMain {
 			System.exit(1);
 		}
 
-		File srcFile= new File(args[0]);
-		File outFile= new File(args[1]);
+		srcFile= new File(args[0]);
+		outFile= new File(args[1]);
 		
 		for (int i=2; i<args.length; i++) {
 			if (args[i].startsWith("-E")) { // Env variable for $if

@@ -118,6 +118,15 @@ substituted value is across all macros and all invocations, it is OK if two diff
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
 and it would not create any conflict with the macro above).
 
+**${:sourcefile}** - this substitutes the name of the source file where this macro definition was
+created. This is only the file name and does not include the path.
+
+**${:sourcefile:root}** - this substitutes the name of root source file being processed (e.g. the
+first file on the command line). This is only the file name and does not include the path.
+
+**${:outputfile}** - this substitutes the name of the output file (e.g. the
+second file on the command line). This is only the file name and does not include the path.
+
 ## Macro Invocation (Evaluation)
 
 A macro invocation is indicated in the source text by a "$" character followed by the macro name, 

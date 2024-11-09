@@ -64,6 +64,7 @@ public class Macro {
 	private String macroName = null;							// Macro name
 	private List<String> argNames = new ArrayList<String>();	// List of argument names
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
+	private String sourceFile = null;
 	
 	private static int lastUnique = 0; // Last used ${:unique} macro-scope virtual arg value
 	
@@ -74,6 +75,7 @@ public class Macro {
 	public Macro(List<Stmt> defStmts) throws Exception {
 		// The first line of the definition must contain the macro name and any arg names
 		Stmt stmt1 = defStmts.get(0);
+		sourceFile = stmt1.getFileName();
 		String line1 = stmt1.getText();
 		line1 = Util.jsSubstring(line1, 7).trim(); // Remove "$macro "
 		if (line1.endsWith("++")) {
@@ -195,6 +197,9 @@ public class Macro {
 		// Add virtual args
 		lastUnique++; // Unique ID at the macro-invocation scope
 		treeMap.put(":unique", lastUnique+"");
+		treeMap.put(":sourcefile", sourceFile);
+		treeMap.put(":sourcefile:root", FXCoreMPMain.srcFile.getName());
+		treeMap.put(":outputfile", FXCoreMPMain.outFile.getName());
 		
 		// Do argument substitution on each line of the macro defn
 		List<Stmt> genCode = new ArrayList<Stmt>();
