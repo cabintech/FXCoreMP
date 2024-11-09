@@ -78,6 +78,43 @@ sl       ${cr2},15          ; Move arg 2, not sure why 15 instead of 16 bits
 multrr   acc32,${crTemp}    ; acc32 = upper 32 bits of 64 bit result
 $endmacro
 ```
+### Virtual Macro Arguments
+
+In addition to the arguments defined in the macro definition, all macros have access to a set
+of 'virtual' arguments which use the same substitution syntax but are not explicitly passed
+on the macro invocation. These argument provide access to special values created by the macro
+processor. Virtual macro argument names start with ":". Each is described below.
+
+*${:unique}* - this substitutes a unique numeric values for each invocation of a macro. If this
+is used more than once in a macro definition it will substitute the same value each time. This 
+is useful to generate jump labels and unique names so that a macro may be used more than once
+in a single source file without creating duplicate labels and identifiers.
+
+For example, the following macro generates code that contains a *jmp* instruction and the
+target location for it.
+
+```
+; Macro to subtract a fixed number of samples from the delay stored
+; in an MR. If the result is less than zero, the delay is set to zero.
+;
+$macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
+
+;---START SUBTRACT_HARDWARE_DELAY
+cpy_cm	   ${crTemp}, ${delayMR} ; Get calculated delay 
+wrdld    acc32, samples        ; Get number of samples to deduct
+subs     ${crTemp}, acc32      ; Subtract deduction delay 
+jgez     acc32, ${:unique}_sub_ok ; If positive, continue 
+xor	      acc32, acc32          ; If neg, set to zero 
+
+${:unique}_sub_ok:						
+cpy_mc   ${delayMR}, acc32     ; Store back adjusted delay 
+;---END SUBTRACT_HARDWARE_DELAY
+
+$endmacro
+```
+
+Note the use of *${:unique}* to make the jump target and the corresponding label unique
+so this macro can be used multiple times in the same source (or included) file.
 
 ## Macro Invocation (Evaluation)
 
