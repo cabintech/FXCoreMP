@@ -16,8 +16,9 @@ The FXCoreMP macro language supports macro *definitions* and macro *invocations*
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
-A macro starts with the $macro statement, followed by a name, optional arguments, and macro (substitution) text. A simple
-macro with no arguments can be defined on a single line:
+A macro starts with the $macro statement, followed by a name, optional arguments, and macro (substitution) text.
+### Inline Macro Definitions
+A simple macro with no arguments can be defined on a single line:
 ```
 $macro PI 3.14
 ```
@@ -43,6 +44,8 @@ $macro MAKE_LABEL(prefix, name, postfix)  ${prefix}${name}${postfix}
 ```
 The C preprocessor requires elaborate syntax to make adjacent concatenation like this. If this macro were
 invoked with the argument values "a", "b", and "c" the result would be "abc".
+
+### Multi-Line Macro Definitions
 
 A macro definition may define a *multi-line* (as opposed to *inline*) macro. A multi-line macro replaces the entire
 source line with one or more macro lines. A multi-line macro starts with "$macro" followed by the macro name,
