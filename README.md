@@ -85,7 +85,8 @@ of 'virtual' arguments which use the same substitution syntax but are not explic
 on the macro invocation. These arguments provide access to special values created by the macro
 processor. Virtual macro argument names start with ":". Each is described below.
 
-**${:unique}** - this substitutes a unique numeric value for each invocation of a macro. If this
+#### ${:unique}
+This substitutes a unique numeric value for each invocation of a macro. If this
 is used more than once in a macro definition it will substitute the same value each time. This 
 is useful to generate jump labels and unique names so that a macro may be used more than once
 in a single source file without creating duplicate labels and identifiers.
@@ -118,13 +119,16 @@ substituted value is across all macros and all invocations, it is OK if two diff
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
 and it would not create any conflict with the macro above).
 
-**${:sourcefile}** - this substitutes the name of the source file where this macro definition was
+#### ${:sourcefile}
+This substitutes the name of the source file where this macro definition was
 created. This is only the file name and does not include the path.
 
-**${:sourcefile:root}** - this substitutes the name of root source file being processed (e.g. the
+#### ${:sourcefile:root}
+This substitutes the name of root source file being processed (e.g. the
 first file on the command line). This is only the file name and does not include the path.
 
-**${:outputfile}** - this substitutes the name of the output file (e.g. the
+#### ${:outputfile}
+This substitutes the name of the output file (e.g. the
 second file on the command line). This is only the file name and does not include the path.
 
 ## Macro Invocation (Evaluation)
