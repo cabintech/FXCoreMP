@@ -98,16 +98,14 @@ target location for it.
 ; in an MR. If the result is less than zero, the delay is set to zero.
 ;
 $macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
-
 ;---START SUBTRACT_DELAY
-cpy_cm	   ${crTemp}, ${delayMR} ; Get calculated delay 
+cpy_cm	   ${crTemp}, ${delayMR} ; Get calculated delay
 wrdld    acc32, samples        ; Get number of samples to deduct
-subs     ${crTemp}, acc32      ; Subtract deduction delay 
-jgez     acc32, ${:unique}_sub_ok ; If positive, continue 
-xor	      acc32, acc32          ; If neg, set to zero 
-
-${:unique}_sub_ok:						
-cpy_mc   ${delayMR}, acc32     ; Store back adjusted delay 
+subs     ${crTemp}, acc32      ; Subtract deduction delay
+jgez     acc32, ${:unique}_sub_ok ; If positive, continue
+xor	      acc32, acc32          ; If neg, set to zero
+${:unique}_sub_ok:
+cpy_mc   ${delayMR}, acc32     ; Store back adjusted delay
 ;---END SUBTRACT_DELAY
 
 $endmacro
