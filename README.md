@@ -15,9 +15,9 @@ in text substitution. There is some limited conditional processing (see $set and
 The FXCoreMP macro language supports the following statements:
 | Syntax                                         | Description            |
 |------------------------------------------------|------------------------|
-| $macro <name>(argname1,argname2,...) $endmacro | Macro definition       |
+| $macro <name>(argname1,argname2,...)<br>$endmacro | Macro definition       |
 | $<name>(arg1,arg2,...)                         | Macro invocation       |
-| $include <filename> #include <filename>        | Imbed a file           |
+| $include <filename><br>#include <filename>        | Imbed a file           |
 | $set <envparm>=value                           | Set env value          |
 | $if <envparm>=<value>                          | Conditional processing |
 
