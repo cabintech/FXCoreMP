@@ -93,7 +93,7 @@ expanded. Finally the macro invocation text is removed and replaced with the
 substituted and expanded macro text. For a multi-line macro, the entire source line is
 removed and replaced. Inline macros retain the surrounding text on the invocation line.
 
-Since the MULT_16 macro definition is multi-line, the line containing the
+By the example above, the MULT_16 macro definition is multi-line, the line containing the
 macro invocation would be replaced with the following lines:
 
 ```
@@ -131,7 +131,7 @@ This will correctly substitute the PI macro expansion, followed by the letter "R
 ```
 3.14R
 ```
-####Positional and Named Argument Values
+#### Positional and Named Argument Values
 Macro argument values may be supplied in a positional or named format. Most common is the positional
 form where the supplied values are applied to the macro's argument list in the order they appear in
 the macro definition. This good when there are few arguments and their usage is clear, such as:
