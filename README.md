@@ -92,7 +92,7 @@ in a single source file without creating duplicate labels and identifiers.
 
 For example, the following macro generates code that contains a **jmp** instruction and the
 target location for it.
-
+<pre>
 ```
 ; Macro to subtract a fixed number of samples from the delay stored
 ; in an MR. If the result is less than zero, the delay is set to zero.
@@ -110,7 +110,7 @@ cpy_mc   ${delayMR}, acc32     ; Store back adjusted delay
 
 $endmacro
 ```
-
+</pre>
 Note the use of **${:unique}** to make the jump target and the corresponding label unique
 so this macro can be used multiple times in the same source (or included) file.
 
