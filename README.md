@@ -92,25 +92,25 @@ in a single source file without creating duplicate labels and identifiers.
 
 For example, the following macro generates code that contains a **jmp** instruction and the
 target location for it.
-<pre>
+
 ```
 ; Macro to subtract a fixed number of samples from the delay stored
 ; in an MR. If the result is less than zero, the delay is set to zero.
 ;
 $macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
 ;---START SUBTRACT_DELAY
-cpy_cm	  ${crTemp}, ${delayMR} ; Get calculated delay
-wrdld    acc32, samples        ; Get number of samples to deduct
-subs     ${crTemp}, acc32      ; Subtract deduction delay
-jgez     acc32, ${:unique}_sub_ok ; If positive, continue
-xor	     acc32, acc32          ; If neg, set to zero
+cpy_cm	&nbsp;&nbsp;${crTemp},&nbsp;${delayMR}&nbsp;;&nbsp;Get&nbsp;calculated&nbsp;delay
+wrdld&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;samples&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Get&nbsp;number&nbsp;of&nbsp;samples&nbsp;to&nbsp;deduct
+subs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${crTemp},&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Subtract&nbsp;deduction&nbsp;delay
+jgez&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;${:unique}_sub_ok&nbsp;;&nbsp;If&nbsp;positive,&nbsp;continue
+xor	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;If&nbsp;neg,&nbsp;set&nbsp;to&nbsp;zero
 ${:unique}_sub_ok:
-cpy_mc   ${delayMR}, acc32     ; Store back adjusted delay
+cpy_mc&nbsp;&nbsp;&nbsp;${delayMR},&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Store&nbsp;back&nbsp;adjusted&nbsp;delay
 ;---END SUBTRACT_DELAY
 
 $endmacro
 ```
-</pre>
+
 Note the use of **${:unique}** to make the jump target and the corresponding label unique
 so this macro can be used multiple times in the same source (or included) file.
 
