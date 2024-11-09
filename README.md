@@ -174,5 +174,5 @@ Positional and named arguments cannot be mixed in the same macro invocation.
 
 See these additional pages for more information:
 
-[How to run the FXCoreMP macro processor](usage.md)
+[How to run the FXCoreMP macro processor](usage.md)<br>
 [Examples](examples.md)
