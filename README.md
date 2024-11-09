@@ -1,5 +1,4 @@
 # FXCoreMP
-FXCore DSP Macro Preprocessor
 
 This processor implements a macro-substitution language for the [FXCore DSP Assembler](https://www.experimentalnoize.com/product_FXCore.php) similar to
 how the C/C++ preprocessor adds macro capabilities to C and C++ language files. Before the development
@@ -21,7 +20,7 @@ The FXCoreMP macro language supports the following statements:
 | ```$<name>(arg1,arg2,...)```                         | Macro invocation       |
 | ```$include <filename>```<br>```#include <filename>```  | Imbed a file           |
 | ```$set <envparm>=<value>```                           | Set env value          |
-| ```$if <envparm>=<value>```                          | Conditional processing |
+| ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```<br>$endif     | Conditional processing |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
@@ -169,6 +168,69 @@ $CALC_DELAY(tempReg1=r9, tempReg2=r12, offset=r6, buffer_base=r0, cv=r8)
 
 Argument names must match the names used in the macro definition, but are *not* case sensitive.
 Positional and named arguments cannot be mixed in the same macro invocation.
+
+## SET/IF Conditional Processing
+
+The $set and $if statements (along with command-line parameters) allow for conditional inclusion/exclusion of
+blocks of lines from the source file. These statements cannot be used inside a macro. There are
+multiple use cases but a common use is to conditionally include (or exclude) code based on some
+value passed into the preprocessor at compile time. For example, it might be useful to include
+extra debug code for development builds, but exclude that code when assembling for production distribution.
+
+These statements operate on macro 'environment' variables defined either by $set statements or values passed
+on the command line. (Not to be confused with operating system environment variables, these are
+specific to the macro processing system). Macro environment variables have a name and value. If a variable has not been defined
+(e.g. no $set statement has created it, and it was not specified on the command line) then it's value
+is assumed to be an empty string. Macro environment names and values are *case-insensitive*.
+
+The $set statement has the following syntax:
+
+```
+$set <name>=<value>
+```
+
+The environment variable of the given name will be assigned the value on the right side of the "=". The
+value will be trimmed of leading and trailing whitespace, and includes everything up to a comment
+or the end of the line.
+
+This is a simple text assignment, the value is not interpreted in any way (it cannot be a macro invocation).
+Alternatively, an environment variable may be assigned a value by passing an argument on the end of the command
+line when starting the processor. Values assigned on the command line must be simple strings with no embedded whitespace.
+
+```
+java ... -Ename1=value1 -Ename2=value2
+```
+
+In the following example, a macro is defined one of two ways depending on a macro environment variable:
+
+```
+$if (debug=true)
+$macro GENERATE_DEBUG_DATA(fromLoc, length) ++
+;
+; ... code to generate some debug info ...
+;
+$endmacro
+$endif
+
+$if (debug!=true)
+$macro GENERATE_DEBUG_DATA(fromLoc, length) ++
+; Do nothing
+$endmacro
+$endif
+```
+
+When this macro is evaluated it will either create the debug generation code, or just a comment line depending on
+the macro environment variable. So invoking the processor with:
+
+```
+jar ... -Edebug=true
+```
+
+will cause the macro to expand to the debug code, otherwise it will expand to a single comment line.
+
+Currently, nested $if statements are not supported.
+
+# INCLUDE Statement
 
 # More Info
 

@@ -171,17 +171,25 @@ public class FXCoreMPMain {
 				}
 				
 				if (stmtText.startsWith("$if(")) {
-					// Condition section '$if(envname=true|false)'
+					// Condition section '$if(envname=xxx)'
 					if (inIf) throw new Exception("Nested $if statements are not supported at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 					
 					int endParen = stmtText.indexOf(')');
 					if (endParen<0) throw new Exception("Missing closing paren of $if statement at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 					String conditionExp = Util.jsSubstring(stmtText, 4, endParen).trim();
-					String[] expParts = Util.split(conditionExp, "=");
+					String[] expParts = Util.split(conditionExp, "="); // Note if this is "!=" the ! stays with the left operand
 					if (expParts.length != 2) throw new Exception("Invalid $if expression at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+					boolean operator = true;
+					if (expParts[0].endsWith("!")) {
+						operator = false;
+						expParts[0] = Util.jsSubstring(expParts[0], 0, expParts[0].length()-1); // Trim off the "!" from left operand
+					}
 					
 					inIf = true;
-					ifCondition = envMap.getStr(expParts[0], "false").equals(expParts[1]); // TRUE if expression matches env setting
+					ifCondition = envMap.getStr(expParts[0].toLowerCase()).equalsIgnoreCase(expParts[1]); // TRUE if expression matches env setting
+					if (!operator) {
+						ifCondition = !ifCondition; // Invert for "!=" operator
+					}
 					continue; // Do not output the $if statement itself
 				}
 				
@@ -232,16 +240,13 @@ public class FXCoreMPMain {
 				// $set
 				//-----------------------------------------
 				else if (stmtText.startsWith("$set ")) { // Set env value
-					// Expected format: $set env-var-name=true|false
+					// Expected format: $set env-var-name=value
 					String expr = Util.jsSubstring(stmtText, 5);
 					String parts[] = Util.split(expr, "=");
 					if (parts.length != 2) {
 						throw new Exception("Set statement invalid expression syntax in '"+stmtText+"' . Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
 					}
-					if (!parts[1].equals("true") && !parts[1].equals("false")) {
-						throw new Exception("Set value must be 'true' or 'false' in '"+stmtText+"' . Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
-					}
-					envMap.put(parts[0].trim(), parts[1].trim()); // Store (or override) in env map
+					envMap.put(parts[0].trim().toLowerCase(), parts[1].trim()); // Store (or override) in env map
 					continue; // Do not output the $set statement
 				}
 				//-----------------------------------------
@@ -289,7 +294,7 @@ public class FXCoreMPMain {
 					System.err.println("Invalid -E cmd arg, value must be true or false");
 					System.exit(1);
 				}
-				envMap.put(vs[0], vs[1]);
+				envMap.put(vs[0].toLowerCase(), vs[1]);
 			}
 			else if (args[i].startsWith("-D")) { // Debug output level
 				verbose = Util.jsSubstring(args[i], 2);
