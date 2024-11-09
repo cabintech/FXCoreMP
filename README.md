@@ -18,9 +18,9 @@ The FXCoreMP macro language supports macro *definitions* and macro *invocations*
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
 A macro starts with the $macro statement, followed by a name, optional arguments, and macro (substitution) text. A simple
 macro with no arguments can be defined on a single line:
-
->$macro PI 3.14
-
+```
+$macro PI 3.14
+```
 This creates a macro named "PI". When this macro is invoked, the invocation will be replaced with the macro text "3.14". The substitution will be done
 *inline*, meaning that the text resulting from the evaluation (in this case "3.14") will exactly replace the macro
 invocation, and any text on the same line before or after the invocation will be preserved. *Multi-line* macros (described
@@ -29,8 +29,8 @@ below) replace the entire source line with one or more macro lines.
 The macro definition may specify one or more argument name. Each argument must be supplied on the macro 
 invocation (either by name, or by position -- see the invocation section below). Macro names follow the usual rules
 of variable naming (must start with a letter, cannot contain whitespace or other special characters).
-
->$macro MSTOSAMPLES48K(msec)	((${msec}/1000)/(1/48000))
+```
+$macro MS_TO_SAMPLES_48K(msec)  ((${msec}/1000)/(1/48000))
 
 This macro is defined to have one argument named "msec". The value of an argument supplied on an invocation will
 be substituted into the macro text when it is found enclosed in "${" and "}" as shown above. (Note that unlike
@@ -38,9 +38,9 @@ the C preprocessor, macro argument replacement has a different syntax than macro
 clear, and in fact an argument may have the same name as another macro with no ambiguity). 
 
 There is no special syntax required to concatenate two arguments in the output text:
-
->$macro MAKE\_LABEL(prefix, name, postfix) 	${prefix}${name}${postfix}
-
+```
+$macro MAKE_LABEL(prefix, name, postfix)  ${prefix}${name}${postfix}
+```
 The C preprocessor requires elaborate syntax to make adjacent concatenation like this. If this macro were
 invoked with the argument values "a", "b", and "c" the result would be "abc".
 
