@@ -102,10 +102,10 @@ $macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
 cpy_cm    ${crTemp}, ${delayMR}    ; Get calculated delay
 wrdld     acc32, samples           ; Get number of samples to deduct
 subs      ${crTemp}, acc32         ; Subtract deduction delay
-jgez      acc32, ${:unique}_sub_ok ; If positive, continue
+jgez      acc32, sub_ok_${:unique} ; If positive, continue
 xor       acc32, acc32             ; If neg, set to zero
 
-${:unique}_sub_ok:
+sub_ok_${:unique}:
 cpy_mc ${delayMR}, acc32          ; Store back adjusted delay
 ;---END SUBTRACT_DELAY
 
@@ -113,7 +113,10 @@ $endmacro
 ```
 
 Note the use of **${:unique}** to make the jump target and the corresponding label unique
-so this macro can be used multiple times in the same source (or included) file.
+so this macro can be used multiple times in the same source (or included) file. Since the
+substituted value is across all macros and all invocations, it is OK if two different macros
+use the same generated label names (e.g. another macro could define a label "sub_ok_${:unique}"
+and it would not create any conflict with the macro above).
 
 ## Macro Invocation (Evaluation)
 
