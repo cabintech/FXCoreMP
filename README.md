@@ -226,7 +226,7 @@ When this macro is evaluated it will either create the debug generation code, or
 the macro environment variable. So invoking the processor with:
 
 ```
-jar ... -Edebug=true
+java ... -Edebug=true
 ```
 
 will cause the macro to expand to the debug code, otherwise it will expand to a single comment line.
@@ -234,6 +234,14 @@ will cause the macro to expand to the debug code, otherwise it will expand to a 
 Currently, nested $if statements are not supported.
 
 # INCLUDE Statement
+
+The **$include** statement is used to embed lines from an external file into the source file. Once embedded they are treated
+the same as original source (e.g. they are scanned and processed for macro statements). An included file itself may include additional files.
+A file will be included only once (no need for conditional processing as in the #include C preprocessor directive). In the scope
+of a single execution of the processor, a file will be included only once. Any additional includes of that file will be
+skipped.
+
+*(TODO: Check FXCore assembler #include and make it a synonym? Is behavior the same?)*
 
 # More Info
 
