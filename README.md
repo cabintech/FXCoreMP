@@ -17,6 +17,14 @@ The FXCoreMP macro language supports macro *definitions* and macro *invocations*
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
 A macro starts with the $macro statement, followed by a name, optional arguments, and macro (substitution) text.
+
+When processing an input file
+the processor reads macro definitions but does not write them to the output (e.g. they are removed from the source
+text). A macro *invocation* supplies arguments for the macro and is replaced in the output with the results of
+evaluating the macro text and substituting the arguments and (possibly) evaluating other macros. This is sometimes
+referred to as "macro expansion". Macro may be "nested" - e.g. the macro definition text may include invocations
+of other macros.
+
 ### Inline Macro Definitions
 A simple macro with no arguments can be defined on a single line:
 ```
@@ -61,19 +69,93 @@ multrr   acc32,${crTemp}    ; acc32 = upper 32 bits of 64 bit result
 $endmacro
 ```
 
+## Macro Invocation (Evaluation)
 
+A macro invocation is indicated in the source text by a "$" character followed by the macro name, 
+optionally followed by a comma-delimited list of values for the macro arguments. For example:
 
+```
+$MULT_16(r0, r1, r8)
+```
 
+Macro expansion starts with substituting the macro arguments with their
+place holders ${argname} in the macro text. Then any macro invocations in the macro text (e.g.
+nested macros) are expanded. And if a nested macro itself has macro invocations, they are also
+expanded. Finally the macro invocation text is removed and replaced with the
+substituted and expanded macro text. For a multi-line macro, the entire source line is
+removed and replaced. Inline macros retain the surrounding text on the invocation line.
 
-When processing an input file
-the processor reads macro definitions but does not write them to the output (e.g. they are removed from the source
-text). A macro invocation supplies arguments for the macro and is replaced in the output with the results of
-evaluating the macro text and substituting the arguments and (possibly) evaluating other macros. This is sometimes
-referred to as "macro expansion". Macro may be "nested" - e.g. the macro definition text may include invocations
-of other macros.
+Since the MULT_16 macro definition is multi-line, the line containing the
+macro invocation would be replaced with the following lines:
 
-There are two types of substitution done in the macro processing. When a macro is evaluated, any arguments
-supplied on the evaluation are substituted into the macro text using the ${arg-name} syntax. This fully
-delimited syntax avoid any ambiguity about where the argument name ends, so it is possible for two
-arguments to be directly adjoining with no ambiguity (unlike the C preprocessor where you have to jump through
-syntactic hoops to concatenate substituted values). 
+```
+sl       r0,16          ; Move arg1 to upper 32 bits 
+cpy_cc   r8,acc32    ; Save in temp 
+sl       r1,15          ; Move arg 2, not sure why 15 instead of 16 bits 
+multrr   acc32,r8    ; acc32 = upper 32 bits of 64 bit result
+```
+
+If a macro has no arguments the invocation may specify an empty list "()" or omit the list
+all together. The following invocations have the same effect:
+
+```
+$PI
+$PI()
+```
+
+In some rare cases it will be necessary to use the empty argument list to delimit the macro
+name. If the macro invocation is immediately followed by a character which is a valid macro
+name character (e.g. letter or numeric) then the parens are necessary. For example if the PI
+macro is to be followed immediately by the letter "R", then this invocation will not work:
+
+```
+$PIR
+```
+
+The macro processor would fail to find a macro named "PIR". In this case the empty argument
+list will make it unambiguous:
+
+```
+$PI()R
+```
+This will correctly substitute the PI macro expansion, followed by the letter "R" for a result of:
+
+```
+3.14R
+```
+
+Macro argument values may be supplied in a positional or named format. Most common is the positional
+form where the supplied values are applied to the macro's argument list in the order they appear in
+the macro definition. This good when there are few arguments and their usage is clear, such as:
+
+```
+$DIV(x,y)
+```
+
+It is reasonably clear that "x" will be the numerator and "y" the divisor. However, when there is 
+a long list of arguments and especially when multiple registers are passed as the
+values, the code becomes unclear:
+
+```
+$CALC_DELAY(r0, r6, r8, r9, r12)
+```
+
+It would be necessary to find and read the macro definition to have any idea
+about what the arguments are, and if the correct registers are being used. In this case the code
+can be made more readable by using named arguments in the invocation:
+
+```
+$CALC_DELAY(buffer_base=r0, offset=r6, cv=r8, tempReg1=r9, tempReg2=r12)
+```
+
+This makes for more self-documenting code, at the expense of a bit more typing. When using named
+arguments the order is not important, values are assigned to macro arguments by name, not position. The
+following is exactly equivalent to the example above:
+
+```
+$CALC_DELAY(tempReg1=r9, tempReg2=r12, offset=r6, buffer_base=r0, cv=r8)
+```
+
+Currently the macro processor allows a mix of named and positional values in a macro
+invocation, but it is strongly discouraged as it can have unintended results. A future version
+may disallow mixed form invocations.
