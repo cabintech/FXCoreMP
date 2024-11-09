@@ -12,7 +12,14 @@ file. The FXCoreMP processor is a textual substitution system, it does not evalu
 perform higher level functions. Although the macro nesting and arguments can be elaborate, ultimately it results
 in text substitution. There is some limited conditional processing (see $set and $if statements).
  
-The FXCoreMP macro language supports macro *definitions* and macro *invocations*.
+The FXCoreMP macro language supports the following statements:
+| Syntax                                         | Description            |
+|------------------------------------------------|------------------------|
+| $macro <name>(argname1,argname2,...) $endmacro | Macro definition       |
+| $<name>(arg1,arg2,...)                         | Macro invocation       |
+| $include <filename> #include <filename>        | Imbed a file           |
+| $set <envparm>=value                           | Set env value          |
+| $if <envparm>=<value>                          | Conditional processing |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
