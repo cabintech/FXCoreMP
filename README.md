@@ -30,7 +30,7 @@ The macro definition may specify one or more argument name. Each argument must b
 invocation (either by name, or by position -- see the invocation section below). Macro names follow the usual rules
 of variable naming (must start with a letter, cannot contain whitespace or other special characters).
 
->$macro MS_TO_SAMPLES_48K(msec) ((${msec}/1000)/(1/48000))
+>$macro MS\_TO\_SAMPLES\_48K(msec)	((${msec}/1000)/(1/48000))
 
 This macro is defined to have one argument named "msec". The value of an argument supplied on an invocation will
 be substituted into the macro text when it is found enclosed in "${" and "}" as shown above. (Note that unlike
@@ -39,7 +39,7 @@ clear, and in fact an argument may have the same name as another macro with no a
 
 There is no special syntax required to concatenate two arguments in the output text:
 
->$macro MAKE_LABEL(prefix, name, postfix) ${prefix}${name}${postfix}
+>$macro MAKE\_LABEL(prefix, name, postfix) 	${prefix}${name}${postfix}
 
 The C preprocessor requires elaborate syntax to make adjacent concatenation like this. If this macro were
 invoked with the argument values "a", "b", and "c" the result would be "abc".
@@ -51,10 +51,10 @@ constitute the macro text.
 
 ```
 $macro MULT_16(cr1, cr2, crTemp) ++
-sl			${cr1}, 16			; Move arg1 to upper 32 bits 
-cpy_cc		${crTemp}, acc32	; Save in temp 
-sl			${cr2}, 15			; Move arg 2, not sure why 15 instead of 16 bits 
-multrr		acc32, ${crTemp}	; acc32 = upper 32 bits of 64 bit result
+sl       ${cr1},16          ; Move arg1 to upper 32 bits 
+cpy_cc   ${crTemp},acc32    ; Save in temp 
+sl       ${cr2},15          ; Move arg 2, not sure why 15 instead of 16 bits 
+multrr   acc32,${crTemp}    ; acc32 = upper 32 bits of 64 bit result
 $endmacro
 ```
 
