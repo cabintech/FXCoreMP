@@ -99,13 +99,13 @@ target location for it.
 ;
 $macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
 ;---START SUBTRACT_DELAY
-cpy_cm	&nbsp;&nbsp;${crTemp},&nbsp;${delayMR}&nbsp;;&nbsp;Get&nbsp;calculated&nbsp;delay
-wrdld&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;samples&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Get&nbsp;number&nbsp;of&nbsp;samples&nbsp;to&nbsp;deduct
-subs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${crTemp},&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Subtract&nbsp;deduction&nbsp;delay
-jgez&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;${:unique}_sub_ok&nbsp;;&nbsp;If&nbsp;positive,&nbsp;continue
-xor	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;acc32,&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;If&nbsp;neg,&nbsp;set&nbsp;to&nbsp;zero
+cpy_cm	  ${crTemp}, ${delayMR} ; Get calculated delay
+wrdld   acc32, samples        ; Get number of samples to deduct
+subs    ${crTemp}, acc32      ; Subtract deduction delay
+jgez    acc32, ${:unique}_sub_ok ; If positive, continue
+xor	     acc32, acc32          ; If neg, set to zero
 ${:unique}_sub_ok:
-cpy_mc&nbsp;&nbsp;&nbsp;${delayMR},&nbsp;acc32&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;Store&nbsp;back&nbsp;adjusted&nbsp;delay
+cpy_mc  ${delayMR}, acc32     ; Store back adjusted delay
 ;---END SUBTRACT_DELAY
 
 $endmacro
