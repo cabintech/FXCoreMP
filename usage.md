@@ -3,7 +3,7 @@ should work (see the [OpenJDK site](https://jdk.java.net/) for current Java vers
 To verify your Java installation run the command `java --version` from a command line. If the command is not
 found you need to install Java on your system. If it is, verify the version is at least 17. For example:
 
-``'
+```
 > java --version
 java 18 2022-03-22
 Java(TM) SE Runtime Environment (build 18+36-2087)
