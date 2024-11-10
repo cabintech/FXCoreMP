@@ -36,7 +36,9 @@ macro arguments. All this is can be done in a single source file with minimal ex
 There are other programming language macro processors, why create a new one? The first version of 
 this project used the C language preprocessor (CPP) which is well known in the software community. However
 after extensive use it was determined to have too many idiosyncratic behaviors that did not fit well
-with the FXCore toolset or assembler language.
+with the FXCore toolset or assembler language. Since the FXCore assembler syntax is relatively simple
+and line-oriented, it was not difficult to implement a macro language on top of it without
+elaborate parsing and still preserve the functionality of the FXCore preprocessor (library functions).
 
 ## When FXCoreMP?
 
@@ -62,11 +64,13 @@ programmers.
 in on the command line or from `$set` statements. This makes it easy to support different build
 scenarios (debug/test/prod) or control inclusion of optional features or experimental code.
 
-For simple substitution, FXCoreMP and the FXCore assembler .equ statements differ in the syntax
-of how that is done and in how much
-intelligence they employ in the process. For example, the assembler .equ statement can evaluate
-a complex mathematical expression and bitwise operations. FXCoreMP is just direct text
-replacement and does not evaluate any expressions. So for example, consider the following
+### .EQU or inline macro?
+For simple substitution, FXCoreMP inline macros and the FXCore assembler .equ statements differ in the syntax
+and in how/when the substitution is done. The assembler `.equ` statement can evaluate
+a complex mathematical expression and bitwise operations, using the resulting value wherever
+the symbol appears elsewhere in the source code. An FXCoreMP inline macro is just direct text
+replacement and does not evaluate any expressions, so substitutions elsewhere replace the symbol
+with the full text of the expression, leaving it to the assembler to evaluate it in-place. So for example, consider the following
 source code:
 
 ```
@@ -90,8 +94,13 @@ wrdld			r1			VALUE2
 On the first WRDLD statement the assembler would evaluate the expression and build an instruction to
 load the constant value 195 into the upper 16 bits of r0. For the second one, the assembler would have
 already resolved VALUE2 to be 195 and thus load that into the upper half of r1. The result is the same,
-the only difference is when the expression is evaluated.
+the only difference is when the expression is evaluated. In some cases it may be preferred (or even
+necessary) to use `.equ` statements to pre-evaluate expressions when the value is used in a context
+that does not support expressions. The use of `.equ` also improves the ability to read/debug the final
+assembler code because is preserves the logical name in the source code (e.g. in the example above,
+the second WRDLD is more readable because it still has the symbolic name VALUE2. The macro
+symbol VALUE1 has disappeared from the source code).
 
-In general, for substitution of mathematical values, it is preferred to use the assembler .equ
-statements instead of one-line macros. Macros are preferred when the substitution requires
+In general, for substitution of mathematical expressions and simple values, it is preferred to use the assembler `.equ`
+statements instead of one-line macros. FXCoreMP macros may be preferred when the substitution requires
 arguments or multiple lines of code.
