@@ -65,7 +65,8 @@ in on the command line or from `$set` statements. This makes it easy to support 
 scenarios (debug/test/prod) or control inclusion of optional features or experimental code.
 
 ### .EQU or inline macro?
-For simple substitution, FXCoreMP inline macros and the FXCore assembler .equ statements differ in the syntax
+
+For simple substitution, FXCoreMP inline macros and the FXCore assembler `.equ` statements differ in the syntax
 and in how/when the substitution is done. The assembler `.equ` statement can evaluate
 a complex mathematical expression and bitwise operations, using the resulting value wherever
 the symbol appears elsewhere in the source code. An FXCoreMP inline macro is just direct text
