@@ -4,8 +4,6 @@ how the C/C++ preprocessor adds macro capabilities to C and C++ language files. 
 of this processor, an [attempt was made to leverage the C preprocessor](cpp.md) for this purpose. Shortcomings of that
 approach inspired the creation of this preprocessor specifically designed for the FXCore assembly language.
 
-*[Why?](why.md)*
-
 This processor reads an FXCore assembler source file (usually named "*.fxc") and writes an output file which is
 a modified version of the input. Modifications are made by the processing of macro statements in the source
 file. The FXCoreMP processor is a textual substitution system, it does not evaluate mathematical expressions or
@@ -322,4 +320,5 @@ but must not be recursive (e.g. a macro must not invoke itself directly or or in
 See these additional pages for more information:
 
 [Installation and usage](usage.md)<br>
-[Examples](examples.md)
+[Examples](examples.md)<br>
+[Why another preprocessor?](why.md)

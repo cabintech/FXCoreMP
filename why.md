@@ -9,14 +9,27 @@ the toolset lacked some features a long-time programmer might expect in a softwa
 platform. Since this project's inception the FXCore toolset
 has improved in many areas, but we still find this macro capability very useful for non-Gooeycore FXCore programming.
 
-In general our goal has been enable creation of constructs that are a bit closer to
-higher level language programming and abstract away details when possible. For example it is possible to
-create a macro that emulates a high level language 'switch' style statement that branches to
-one of several target locations based on the value of a variable (register).
-
 Note that FXCoreMP *complements* the FXCore toolset, it does not replace it or disable any of its features.
-Program written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
-preprocessor (library functions) and the assembler itself. 
+Programs written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
+preprocessor (library functions) and the assembler itself.*
+
+In general our goal has been improve the FXCore text-based programming experience. We have found it useful for
+creation of constructs that are a bit closer to
+higher level language programming while abstracting away details when possible. For example it is possible to
+create a macro that emulates a high level language 'switch' style statement that branches to
+one of several target locations based on the value of a variable (register). Of course at the basic level it
+is still assembler language with hard limitations (like no backward branching, thus no looping constructs). We use
+FXCoreMP macros to create moderately complex data structures in Memory Registers which improves readability
+and insures the MRs are initialized and used correctly.
+
+The lack of looping capability in the instruction set makes it important to be able to easily reuse large
+blocks of code. For example if a complex operation needs to be done (say) on 3 different delay buffers,
+there is no way to write code once and write a FOR loop to run it multiple times. The code must be
+physically duplicated, and each copy is customized to some degree (different buffer address, maybe
+different parameters and control signals). FXCoreMP macros are ideally suited to these scenarios. The code
+block can be written and tested, then easily turned into a macro in the same source file, and then
+invoked multiple times to create multiple expansions of the code block with customizations as needed by
+macro arguments. All this is can be done in a single source file with minimal extra syntax.
 
 There are other programming language macro processors, why create a new one? The first version of 
 this project used the C language preprocessor (CPP) which is well known in the software community. However
@@ -44,7 +57,7 @@ text substitution capabilities.
 complex projects with shared common code. The `$include` mechanism is simple and familiar to many
 programmers.
 5. FXCoreMP provides a means for conditional inclusion/exclusion of code depending on values passed
-in on the command line or from `$set1` statements. This makes it easy to support different build
+in on the command line or from `$set` statements. This makes it easy to support different build
 scenarios (debug/test/prod) or control inclusion of optional features or experimental code.
 
 For simple substitution, FXCoreMP and the FXCore assembler .equ statements differ in the syntax
