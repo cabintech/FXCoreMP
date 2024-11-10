@@ -1,6 +1,5 @@
 /bin
 /build/bin
-/build/jar
 
 # Compiled class file
 *.class
