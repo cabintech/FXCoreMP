@@ -1,4 +1,6 @@
 /bin
+/build/bin
+/build/jar
 
 # Compiled class file
 *.class
@@ -13,7 +15,6 @@
 .mtj.tmp/
 
 # Package Files #
-*.jar
 *.war
 *.nar
 *.ear

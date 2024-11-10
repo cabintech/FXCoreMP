@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- ANT build file -->
+<project default="create_run_jar" name="Create Runnable Jar for Project FXCoreMP">
+    <target name="init">
+    	<mkdir dir="bin"/>
+    	<mkdir dir="jar"/>
+    </target>
+    <target name="compile" depends="init">
+    	<javac srcdir="../src" destdir="bin"/>
+    </target>
+    <target name="create_run_jar" depends="compile">
+        <jar destfile="jar/FXCoreMP.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.cabintech.fxcoremp.FXCoreMPMain"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="bin"/>
+        </jar>
+    </target>
+</project>
