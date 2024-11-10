@@ -9,13 +9,12 @@ the toolset lacked some features a long-time programmer might expect in a softwa
 platform. Since this project's inception the FXCore toolset
 has improved in many areas, but we still find this macro capability very useful for non-Gooeycore FXCore programming.
 
-In general our goal has been to make FXCore (textual) programming a bit closer to
-higher level languages and abstract away details when possible. For example it is possible to
+In general our goal has been enable creation of constructs that are a bit closer to
+higher level language programming and abstract away details when possible. For example it is possible to
 create a macro that emulates a high level language 'switch' style statement that branches to
 one of several target locations based on the value of a variable (register).
 
-
-Note that FXCoreMP complements the FXCore toolset, it does not replace it or disable any of its features.
+Note that FXCoreMP *complements* the FXCore toolset, it does not replace it or disable any of its features.
 Program written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
 preprocessor (library functions) and the assembler itself. 
 
