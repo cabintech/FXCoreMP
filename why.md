@@ -8,6 +8,7 @@ text-based programming environment is preferred and
 the toolset lacked some features a long-time programmer might expect in a software (or firmware) development
 platform. Since this project's inception the FXCore toolset
 has improved in many areas, but we still find this macro capability very useful for non-Gooeycore FXCore programming.
+This processor is currently used extensively in a project of about 10K lines of code.
 
 Note that FXCoreMP *complements* the FXCore toolset, it does not replace it or disable any of its features.
 Programs written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
