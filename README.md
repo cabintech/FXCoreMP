@@ -1,5 +1,6 @@
-# FXCoreMP
+<p style="text-align: center;font-size:150%;font-weight:bold;">FXCoreMP</p>
 
+# Introduction
 This processor implements a macro-substitution language for the [FXCore DSP Assembler](https://www.experimentalnoize.com/product_FXCore.php) similar to
 how the C/C++ preprocessor adds macro capabilities to C and C++ language files. Before the development
 of this processor, an [attempt was made to leverage the C preprocessor](cpp.md) for this purpose. Shortcomings of that
@@ -24,7 +25,7 @@ The FXCoreMP macro language supports the following statements:
 | Set env value          | ```$set <envparm>=<value>```                           |
 | Conditional processing | ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     |
 
-## Macro Definitions
+# Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
 A macro starts with `$macro`, followed by a name, optional arguments, and macro (substitution) text.
 
@@ -35,7 +36,7 @@ evaluating the macro text and substituting the arguments and (possibly) evaluati
 referred to as "macro expansion". Macros may be "nested" - e.g. the macro definition text may include invocations
 of other macros.
 
-### Inline Macro Definitions
+## Inline Macro Definitions
 A simple macro with no arguments can be defined on a single line:
 ```
 $macro PI 3.14
@@ -62,7 +63,7 @@ $macro MAKE_LABEL(prefix, name, postfix)  ${prefix}${name}${postfix}
 ```
 If this macro were invoked with the argument values "a", "b", and "c" the result would be "abc".
 
-### Multi-Line Macro Definitions
+## Multi-Line Macro Definitions
 
 A macro definition may define a *multi-line* (as opposed to *inline*) macro. A multi-line macro replaces the entire
 source line with one or more macro lines. A multi-line macro starts with `$macro` followed by the macro name,
@@ -77,14 +78,14 @@ sl       ${cr2},15          ; Move arg 2, not sure why 15 instead of 16 bits
 multrr   acc32,${crTemp}    ; acc32 = upper 32 bits of 64 bit result
 $endmacro
 ```
-### Virtual Macro Arguments
+## Virtual Macro Arguments
 
 In addition to the arguments defined in the macro definition, all macros have access to a set
 of 'virtual' arguments which use the same substitution syntax but are not explicitly passed
 on the macro invocation. These arguments provide access to special values created by the macro
 processor. Virtual macro argument names start with ":". Each is described below.
 
-#### ${:unique}
+### ${:unique}
 This substitutes a unique numeric value for each *invocation* of a macro. If this
 appears more than once in a macro definition it will substitute the same value for each appearance. This 
 is useful to generate jump labels and unique names so that a macro may be used more than once
@@ -118,19 +119,19 @@ substituted value is unique across all macros and all invocations, it is OK if t
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
 and it would not create any conflict with the macro above).
 
-#### ${:sourcefile}
+### ${:sourcefile}
 This substitutes the name of the source file where this macro definition was
 created. This is only the file name and does not include the path.
 
-#### ${:sourcefile:root}
+### ${:sourcefile:root}
 This substitutes the name of root source file being processed (e.g. the
 first file on the command line). This is only the file name and does not include the path.
 
-#### ${:outputfile}
+### ${:outputfile}
 This substitutes the name of the output file (e.g. the
 second file on the command line). This is only the file name and does not include the path.
 
-## Macro Invocation (Evaluation)
+# Macro Invocation (Evaluation)
 
 A macro invocation is indicated in the source text by a "$" character followed by the macro name, 
 optionally followed by a comma-delimited list of values for the macro arguments. Macro
@@ -185,7 +186,7 @@ This will correctly substitute the PI macro expansion, followed by the letter "R
 ```
 3.14R
 ```
-#### Positional and Named Argument Values
+## Positional and Named Argument Values
 Macro argument values may be supplied in a positional or named format. Most common is the positional
 form where the supplied values are applied to the macro's argument list in the order they appear in
 the macro definition. This good when there are few arguments and their usage is clear, such as:
@@ -223,7 +224,7 @@ $CALC_DELAY(tempReg1=r9, tempReg2=r12, offset=r6, buffer_base=r0, cv=r8)
 Argument names must match the names used in the macro definition, but are *not* case sensitive.
 Positional and named arguments cannot be mixed in the same macro invocation.
 
-## SET/IF Conditional Processing
+# SET/IF Conditional Processing
 
 The `$set` and `$if` statements (along with command-line parameters) allow for conditional inclusion/exclusion of
 blocks of lines from the source file. These statements cannot be used inside a macro. There are
