@@ -11,23 +11,25 @@ has improved in many areas, but we still find this macro capability very useful 
 
 Note that FXCoreMP *complements* the FXCore toolset, it does not replace it or disable any of its features.
 Programs written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
-preprocessor (library functions) and the assembler itself.*
+preprocessor (library functions) and the assembler itself.
 
 In general our goal has been improve the FXCore text-based programming experience. We have found it useful for
 creation of constructs that are a bit closer to
 higher level language programming while abstracting away details when possible. For example it is possible to
 create a macro that emulates a high level language 'switch' style statement that branches to
 one of several target locations based on the value of a variable (register). Of course at the basic level it
-is still assembler language with hard limitations (like no backward branching, thus no looping constructs). We use
+is still assembler language with the limitations of the hardware instruction set (like no backward branching, thus no looping constructs). We use
 FXCoreMP macros to create moderately complex data structures in Memory Registers which improves readability
-and insures the MRs are initialized and used correctly.
+and insures the MRs are initialized and used correctly. We use conditional inclusion (`$if`) to enable
+diagnostics code for development builds and for building multiple variations from common source code.
 
 The lack of looping capability in the instruction set makes it important to be able to easily reuse large
 blocks of code. For example if a complex operation needs to be done (say) on 3 different delay buffers,
-there is no way to write code once and write a FOR loop to run it multiple times. The code must be
-physically duplicated, and each copy is customized to some degree (different buffer address, maybe
-different parameters and control signals). FXCoreMP macros are ideally suited to these scenarios. The code
-block can be written and tested, then easily turned into a macro in the same source file, and then
+there is no way to write code once and use a FOR loop to run it multiple times. The code must be
+physically duplicated, and each copy must be customized to some degree (different buffer address, maybe
+different parameters and control signals). It is problematic for maintenance and enhancements to have
+so much duplicated code. FXCoreMP macros are ideally suited to these scenarios. The code
+block can be written and tested, then easily turned into a macro by adding 2 lines of code, and then
 invoked multiple times to create multiple expansions of the code block with customizations as needed by
 macro arguments. All this is can be done in a single source file with minimal extra syntax.
 
