@@ -69,6 +69,7 @@ $endmacro
 ; Short hand for IF_SWITCH_HIGH()
 $macro IF_SWITCH(a,b) ++
 $IF_SWITCH_HIGH(${a},${b})
+$endmacro
 ```
 
 ```
