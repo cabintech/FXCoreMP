@@ -20,13 +20,13 @@ The FXCoreMP macro language supports the following statements:
 |------------------------------------------------|------------------------|
 | Macro definition       | ```$macro <name>(argname1,argname2,...)```<br>```$endmacro``` |
 | Macro invocation       | ```$<name>(arg1,arg2,...)```                         |
-| Imbed a file           | ```$include <filename>```<br>```#include <filename>```  |
+| Imbed a file           | ```$include <filename>``` |
 | Set env value          | ```$set <envparm>=<value>```                           |
 | Conditional processing | ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
-A macro starts with the $macro statement, followed by a name, optional arguments, and macro (substitution) text.
+A macro starts with `$macro`, followed by a name, optional arguments, and macro (substitution) text.
 
 When processing an input file
 the processor reads macro definitions but does not write them to the output (e.g. they are removed from the source
@@ -45,29 +45,28 @@ This creates a macro named "PI". When this macro is invoked, the invocation will
 invocation, and any text on the same line before or after the invocation will be preserved. *Multi-line* macros (described
 below) replace the entire source line with one or more macro lines.
 
-The macro definition may specify one or more argument name. Each argument must be supplied on the macro 
+The macro definition may specify one or more argument names. Each argument must be supplied on the macro 
 invocation (either by name, or by position -- see the invocation section below). Macro names follow the usual rules
 of variable naming (must start with a letter, cannot contain whitespace or other special characters).
 ```
 $macro MS_TO_SAMPLES_48K(msec)  ((${msec}/1000)/(1/48000))
 ```
 This macro is defined to have one argument named "msec". The value of an argument supplied on an invocation will
-be substituted into the macro text when it is found enclosed in "${" and "}" as shown above. (Note that unlike
+be substituted into the macro text wherever the argument name is found enclosed in `${` and `}` as shown above. (Note that unlike
 the C preprocessor, macro argument replacement has a different syntax than macro invocation so the intent is
 clear, and in fact an argument may have the same name as another macro with no ambiguity). 
 
-There is no special syntax required to concatenate two arguments in the output text:
+Unlike the C preprocessor, there is no special syntax required to directly concatenate two arguments in the output text:
 ```
 $macro MAKE_LABEL(prefix, name, postfix)  ${prefix}${name}${postfix}
 ```
-The C preprocessor requires elaborate syntax to make adjacent concatenation like this. If this macro were
-invoked with the argument values "a", "b", and "c" the result would be "abc".
+If this macro were invoked with the argument values "a", "b", and "c" the result would be "abc".
 
 ### Multi-Line Macro Definitions
 
 A macro definition may define a *multi-line* (as opposed to *inline*) macro. A multi-line macro replaces the entire
 source line with one or more macro lines. A multi-line macro starts with `$macro` followed by the macro name,
-optional list of arguments, and a "++" continuation indicator. The following source lines, up to `$endmacro`
+optional list of arguments, and a `++` continuation indicator. The subsequent source lines, up to `$endmacro`
 constitute the macro text.
 
 ```
@@ -86,8 +85,8 @@ on the macro invocation. These arguments provide access to special values create
 processor. Virtual macro argument names start with ":". Each is described below.
 
 #### ${:unique}
-This substitutes a unique numeric value for each invocation of a macro. If this
-is used more than once in a macro definition it will substitute the same value each time. This 
+This substitutes a unique numeric value for each *invocation* of a macro. If this
+appears more than once in a macro definition it will substitute the same value for each appearance. This 
 is useful to generate jump labels and unique names so that a macro may be used more than once
 in a single source file without creating duplicate labels and identifiers.
 
@@ -115,7 +114,7 @@ $endmacro
 
 Note the use of `${:unique}` to make the jump target and the corresponding label unique
 so this macro can be used multiple times in the same source (or included) file. Since the
-substituted value is across all macros and all invocations, it is OK if two different macros
+substituted value is unique across all macros and all invocations, it is OK if two different macros
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
 and it would not create any conflict with the macro above).
 
@@ -142,13 +141,13 @@ $MULT_16(r0, r1, r8)
 ```
 
 Macro expansion starts with substituting the macro arguments with their
-place holders ${argname} in the macro text. Then any macro invocations in the macro text (e.g.
+place holders `${argname}` in the macro text. Then any macro invocations in the macro text (e.g.
 nested macros) are expanded. And if a nested macro itself has macro invocations, they are also
 expanded. Finally the macro invocation text is removed and replaced with the
 substituted and expanded macro text. For a multi-line macro, the entire source line is
 removed and replaced. Inline macros retain the surrounding text on the invocation line.
 
-By the example above, the MULT_16 macro definition is multi-line, the line containing the
+By the example above, the MULT_16 macro definition is multi-line, thus the line containing the
 macro invocation would be replaced with the following lines:
 
 ```
@@ -230,7 +229,8 @@ The `$set` and `$if` statements (along with command-line parameters) allow for c
 blocks of lines from the source file. These statements cannot be used inside a macro. There are
 multiple use cases but a common use is to conditionally include (or exclude) code based on some
 value passed into the preprocessor at compile time. For example, it might be useful to include
-extra debug code for development builds, but exclude that code when assembling for production distribution.
+extra debug code for development builds, but exclude that code when assembling for production distribution. They
+might also be used to include or exclude optional feature or experimental code.
 
 These statements operate on macro 'environment' variables defined either by `$set` statements or values passed
 on the command line. (Not to be confused with operating system environment variables, these are
@@ -283,14 +283,14 @@ java ... -Edebug=true
 
 will cause the macro to expand to the debug code, otherwise it will expand to a single comment line.
 
-Currently, nested **$if** statements are not supported.
+Currently, nested `$if` statements are not supported.
 
 # INCLUDE Statement
 
 The `$include` statement is used to embed lines from an external file into the source file (similar to the
 C preprocessor *#include* directive). Once embedded they are treated
 the same as original source (e.g. they are scanned and processed for macro statements). An included file itself may include additional files.
-A file will be included only once (no need for conditional processing as in the #include C preprocessor directive). In the scope
+A file will be included only once (no need for conditional processing as with the #include C preprocessor directive). In the scope
 of a single execution of the processor, a file will be included only once. Any additional includes of that file will be
 skipped.
 
@@ -321,5 +321,5 @@ but must not be recursive (e.g. a macro must not invoke itself directly or or in
 
 See these additional pages for more information:
 
-[How to run the FXCoreMP macro processor](usage.md)<br>
+[Installation and usage](usage.md)<br>
 [Examples](examples.md)
