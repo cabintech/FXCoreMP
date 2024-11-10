@@ -13,16 +13,16 @@ file. The FXCoreMP processor is a textual substitution system, it does not evalu
 perform higher level functions. Although the macro nesting and arguments can be elaborate, ultimately it results
 in text substitution. There is some limited conditional processing (see `$set` and `$if` statements).
 
-Where possible FXCoreMP treats macro names, argument names, IF conditions, etc. as *case-insensitive*.
+FXCoreMP treats macro names, argument names, and if-conditions, as *case-insensitive*.
  
 The FXCoreMP macro language supports the following statements:
-| Syntax                                         | Description            |
+| Description                                         | Macro Syntax           |
 |------------------------------------------------|------------------------|
-| ```$macro <name>(argname1,argname2,...)```<br>```$endmacro``` | Macro definition       |
-| ```$<name>(arg1,arg2,...)```                         | Macro invocation       |
-| ```$include <filename>```<br>```#include <filename>```  | Imbed a file           |
-| ```$set <envparm>=<value>```                           | Set env value          |
-| ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     | Conditional processing |
+| Macro definition       | ```$macro <name>(argname1,argname2,...)```<br>```$endmacro``` |
+| Macro invocation       | ```$<name>(arg1,arg2,...)```                         |
+| Imbed a file           | ```$include <filename>```<br>```#include <filename>```  |
+| Set env value          | ```$set <envparm>=<value>```                           |
+| Conditional processing | ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     |
 
 ## Macro Definitions
 A macro definition specifies the name of the macro, the number and names of any arguments, and 1 or more lines of macro text.
