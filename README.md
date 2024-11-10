@@ -7,11 +7,11 @@ approach inspired the creation of this preprocessor specifically designed for th
 
 *[Why?](why.md)*
 
-This processor reads an FXCore assembler source file (usually named "x.fxc") and writes an output file which is
+This processor reads an FXCore assembler source file (usually named "*.fxc") and writes an output file which is
 a modified version of the input. Modifications are made by the processing of macro statements in the source
 file. The FXCoreMP processor is a textual substitution system, it does not evaluate mathematical expressions or
 perform higher level functions. Although the macro nesting and arguments can be elaborate, ultimately it results
-in text substitution. There is some limited conditional processing (see $set and $if statements).
+in text substitution. There is some limited conditional processing (see `$set` and `$if` statements).
 
 Where possible FXCoreMP treats macro names, argument names, IF conditions, etc. as *case-insensitive*.
  
