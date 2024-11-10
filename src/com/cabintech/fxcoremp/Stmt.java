@@ -61,7 +61,7 @@ public class Stmt {
 			}
 		}
 		
-		// Now look for line comments
+		// Now look for line comments, assembler supports ";" and "//"
 		
 		i = text.indexOf(';');
 		if (i>=0) {
@@ -69,7 +69,6 @@ public class Stmt {
 			if (!isBlockCommentEnd && !isBlockCommentStart) cmnt = Util.jsSubstring(text, i);
 		}
 		else { // No ; comment
-			//TODO: Remove this if FXCore asm does not support this comment style
 			i = text.indexOf("//"); // C-style line comment
 			if (i>=0) {
 				text = Util.jsSubstring(text, 0, i);
