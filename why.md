@@ -1,25 +1,83 @@
-## Why FXCoreMP?
-Discuss diff with FXCore macro libraries, use of pure-text substitution, ability to reference
-labels outside the macro, conditional processing, goal to allow more HLL (High Level Language) type constructs. Note also this 
-processor does no type checking, there is no inherent notion of "input" or "output" arguments like
-FXCore libraries -- everything is just text. Note that (with recent releases) it can be better to use
-FXCore ".equ" statements instead of simple inline macros. ".equ" does real expression evaluation at compile time
-with lots of useful math and bitwise operators.
+# Why FXCoreMP?
 
-Diffs with preprocessor
+*FXCoreMP* was created to make some FXCore programming tasks easier. The FXCore preprocessor and assembler
+supplied by [Experimental Noize](https://www.experimentalnoize.com/product_FXCore.php) have a lot of useful 
+features, but to some degree they are oriented around
+the graphical program builder (Gooeycore). From a professional software development perspective a 
+text-based programming environment is preferred and
+the toolset lacked some features a long-time programmer might expect in a software (or firmware) development
+platform. Since this project's inception the FXCore toolset
+has improved in many areas, but we still find this macro capability very useful for non-Gooeycore FXCore programming.
 
-PP uses @ syntax to expand a library function with a 2 level naming hierarch (@libraryname.functionname).
+In general our goal has been to make FXCore (textual) programming a bit closer to
+higher level languages and abstract away details when possible. For example it is possible to
+create a macro that emulates a high level language 'switch' style statement that branches to
+one of several target locations based on the value of a variable (register).
 
-PP related functions are defined in a Library which is coded as a nested XML structure and tags, with assember
-code embedded in <code></code> tags. MP related macros
-can can be defined in a single file with simple $macro statements and looks just like
-regular assembler code (in fact the Notepad++ syntax highlighting works fine on such files).
 
-PP library functions define the function arguments with a name, type, usage (in/out), and description. Much
-of that meta information is for use by the Gooycore graphical editor. MP macro arguments have only a name.
-MP does not know of, or enforce any argument types or have any notion of "input" versus "output" values.
+Note that FXCoreMP complements the FXCore toolset, it does not replace it or disable any of its features.
+Program written using FXCoreMP macros can also leverage all of the capabilities of the FXCore
+preprocessor (library functions) and the assembler itself. 
 
-Both support the notion of unique identifiers so that if a macro is used more than once in a single source
-file it will generate unique names (usually labels) for each expansion. PP does this automatically with
-*jmp* targets and memory declarations. MP does this with a virtual macro argument ${:unique} which can
-be used in any way (e.g. prefix or postfix on any arbitrary text in the macro).
+There are other programming language macro processors, why create a new one? The first version of 
+this project used the C language preprocessor (CPP) which is well known in the software community. However
+after extensive use it was determined to have too many idiosyncratic behaviors that did not fit well
+with the FXCore toolset or assembler language.
+
+## When FXCoreMP?
+
+There is some overlap in function between the FXCore preprocessor and it's library functions, the
+assembler and it's .equ statement, and FXCoreMP macros. All of them can do some form of 
+substitution or replacement. Some situations in which FXCoreMP can make FXCore programming easier:
+
+1. FXCoreMP has a much simpler syntax for defining macros that
+looks the same as normal assembler code and can be mixed into normal source code files.
+FXCore preprocessor library functions (the equivalent of macros) are in separate files with a 
+different format (XML). Note however, FXCoreMP macros are not directly usable in Gooeycore like
+preprocessor library functions.
+2. Arguments for FXCoreMP macros can be positional or named. The named format for macros
+with many parameters can greatly increase the readability of the source code (see [Named Arguments](README.md#named-args)).
+3. FXCoreMP macros can reference labels outside the macro. The sample SWITCH macros show how
+target label names can be passed as macro arguments, something that is not possible with
+the preprocessor library functions which have strict self-containment rules and lack general
+text substitution capabilities.
+4. FXCoreMP provides an `$include` statement to allow organization of source files in
+complex projects with shared common code. The `$include` mechanism is simple and familiar to many
+programmers.
+5. FXCoreMP provides a means for conditional inclusion/exclusion of code depending on values passed
+in on the command line or from `$set1` statements. This makes it easy to support different build
+scenarios (debug/test/prod) or control inclusion of optional features or experimental code.
+
+For simple substitution, FXCoreMP and the FXCore assembler .equ statements differ in the syntax
+of how that is done and in how much
+intelligence they employ in the process. For example, the assembler .equ statement can evaluate
+a complex mathematical expression and bitwise operations. FXCoreMP is just direct text
+replacement and does not evaluate any expressions. So for example, consider the following
+source code:
+
+```
+$macro			VALUE1		((4*48)<<8)|3
+.equ			VALUE2		((4*48)<<8)|3
+
+wrdld			r0			$VALUE1
+wrdld			r1			VALUE2
+```
+
+After processing by FXCoreMP and the FXCore preprocessor, the source sent to the assembler would be:
+
+```
+.equ			VALUE2		((4*48)<<8)|3
+
+wrdld			r0			((4*48)<<8)|3
+wrdld			r1			VALUE2
+
+```
+
+On the first WRDLD statement the assembler would evaluate the expression and build an instruction to
+load the constant value 195 into the upper 16 bits of r0. For the second one, the assembler would have
+already resolved VALUE2 to be 195 and thus load that into the upper half of r1. The result is the same,
+the only difference is when the expression is evaluated.
+
+In general, for substitution of mathematical values, it is preferred to use the assembler .equ
+statements instead of one-line macros. Macros are preferred when the substitution requires
+arguments or multiple lines of code.

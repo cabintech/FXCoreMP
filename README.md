@@ -185,7 +185,8 @@ This will correctly substitute the PI macro expansion, followed by the letter "R
 3.14R
 ```
 ## Positional and Named Argument Values
-Macro argument values may be supplied in a positional or named format. Most common is the positional
+
+Macro <a id="named-args"></a> argument values may be supplied in a positional or named format. Most common is the positional
 form where the supplied values are applied to the macro's argument list in the order they appear in
 the macro definition. This good when there are few arguments and their usage is clear, such as:
 

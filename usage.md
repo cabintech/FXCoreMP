@@ -19,7 +19,8 @@ java -jar FXCoreMP.jar <input-file> <output-file>
 
 This will read source code (with macro statements) from the named input file, and write the expanded
 source code to the named output file. Optionally, one or more macro environment variables can be
-assigned a value by adding "-E" arguments to the end of the command line:
+assigned a value by adding "-E" arguments to the end of the command line (see the `$set` macro statement
+description):
 
 ```
 java -jar FXCoreMP.jar <input-file> <output-file> -Eenvparm1=value1 -Eenvparm2=value2 ...
