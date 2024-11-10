@@ -32,7 +32,7 @@ When processing an input file
 the processor reads macro definitions but does not write them to the output (e.g. they are removed from the source
 text). A macro *invocation* supplies arguments for the macro and is replaced in the output with the results of
 evaluating the macro text and substituting the arguments and (possibly) evaluating other macros. This is sometimes
-referred to as "macro expansion". Macro may be "nested" - e.g. the macro definition text may include invocations
+referred to as "macro expansion". Macros may be "nested" - e.g. the macro definition text may include invocations
 of other macros.
 
 ### Inline Macro Definitions
@@ -66,8 +66,8 @@ invoked with the argument values "a", "b", and "c" the result would be "abc".
 ### Multi-Line Macro Definitions
 
 A macro definition may define a *multi-line* (as opposed to *inline*) macro. A multi-line macro replaces the entire
-source line with one or more macro lines. A multi-line macro starts with "$macro" followed by the macro name,
-optional list of arguments, and a "++" continuation indicator. The following source lines, up to "$endmacro" 
+source line with one or more macro lines. A multi-line macro starts with `$macro` followed by the macro name,
+optional list of arguments, and a "++" continuation indicator. The following source lines, up to `$endmacro`
 constitute the macro text.
 
 ```
@@ -113,7 +113,7 @@ cpy_mc ${delayMR}, acc32          ; Store back adjusted delay
 $endmacro
 ```
 
-Note the use of **${:unique}** to make the jump target and the corresponding label unique
+Note the use of `${:unique}` to make the jump target and the corresponding label unique
 so this macro can be used multiple times in the same source (or included) file. Since the
 substituted value is across all macros and all invocations, it is OK if two different macros
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
@@ -226,19 +226,19 @@ Positional and named arguments cannot be mixed in the same macro invocation.
 
 ## SET/IF Conditional Processing
 
-The **$set** and **$if** statements (along with command-line parameters) allow for conditional inclusion/exclusion of
+The `$set` and `$if` statements (along with command-line parameters) allow for conditional inclusion/exclusion of
 blocks of lines from the source file. These statements cannot be used inside a macro. There are
 multiple use cases but a common use is to conditionally include (or exclude) code based on some
 value passed into the preprocessor at compile time. For example, it might be useful to include
 extra debug code for development builds, but exclude that code when assembling for production distribution.
 
-These statements operate on macro 'environment' variables defined either by **$set** statements or values passed
+These statements operate on macro 'environment' variables defined either by `$set` statements or values passed
 on the command line. (Not to be confused with operating system environment variables, these are
 specific to the macro processing system). Macro environment variables have a name and value. If a variable has not been defined
-(e.g. no **$set** statement has created it, and it was not specified on the command line) then it's value
+(e.g. no `$set` statement has created it, and it was not specified on the command line) then it's value
 is assumed to be an empty string. Macro environment names and values are *case-insensitive*.
 
-The **$set** statement has the following syntax:
+The `$set` statement has the following syntax:
 
 ```
 $set <name>=<value>
@@ -287,21 +287,35 @@ Currently, nested **$if** statements are not supported.
 
 # INCLUDE Statement
 
-The **$include** statement is used to embed lines from an external file into the source file. Once embedded they are treated
+The `$include` statement is used to embed lines from an external file into the source file (similar to the
+C preprocessor *#include* directive). Once embedded they are treated
 the same as original source (e.g. they are scanned and processed for macro statements). An included file itself may include additional files.
 A file will be included only once (no need for conditional processing as in the #include C preprocessor directive). In the scope
 of a single execution of the processor, a file will be included only once. Any additional includes of that file will be
 skipped.
 
-*(TODO: Check FXCore assembler #include and make it a synonym? Is behavior the same?)*
+Included files are not limited to containing macro definitions, they may include executable assembler instructions as well. They are
+inserted in place of the `$include` statement and then processed like all other source code.
+
+Syntax:
+
+```
+$include filename
+```
+
+The file name is relative to the directory of the root source file being processed (e.g. the file
+specified as the first parameter of the command line). So if a plain file name is given with
+no path, it will be located in the same directory as the root source file.
 
 # Limitations
 Some known limitations of the macro processor:
 
 1. Block comments using `/* comment */` that span multiple lines inside a macro definition do not appear in the expanded
 macro output. Single line comments using those delimiters will appear in the expanded output.
-2. Macro definitions may not appear inside other macro definitions. Macro invocations may be nested to any level
-but must not be recursive (e.g. a macro must not invoke itself directly or through other macros).
+2. Macro definitions may not appear inside other macro definitions. 
+3. Macro invocations may be nested to any level
+but must not be recursive (e.g. a macro must not invoke itself directly or or indirectly through other macros).
+4. Nested `$if` statements are not supported.
 
 # More Info
 
