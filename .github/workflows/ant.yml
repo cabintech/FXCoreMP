@@ -27,7 +27,12 @@ jobs:
         distribution: 'oracle'
     - name: Build with Ant
       run: ant -noinput -buildfile build.xml
-    - uses: actions/upload-artifact@v4
-      with:
-        name: Package
-        path: build/jar      
+    - name: GIT commit and push all changed files
+      env: 
+        CI_COMMIT_MESSAGE: GitHub Action Build Artifacts
+        CI_COMMIT_AUTHOR: GitHub Action
+      run: |
+        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.email "username@users.noreply.github.com"
+        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
+        git push
