@@ -45,10 +45,10 @@ contain the FXCore executables (FXCoreCmdAsm, FXCorePreroc, etc).
 
 ## Update Command Line Build Tools
 
-Modify the FXCore "assemble.cmd" script to run the macro processor as the first step. The lines highlighted
-below in yellow have been added, blue lines have been modified: 
+Modify the FXCore "assemble.cmd" script to run the macro processor as the first step. The lines that have
+been added or modified are noted in the comments: 
 
-```diff
+```winbatch
 @rem passed order is: full_current_path current_directory name_part preproc_library_path assembler_directive assembler_directive
 @echo off
 rem if old .fxo exists delete it
@@ -56,12 +56,12 @@ IF EXIST "%~2\%~3.fxo" (
  del "%~2\%~3.fxo"
 )
 
-+rem if old .fxo-mp exists delete it
+rem ADDED if old .fxo-mp exists delete it
 -IF EXIST "%~2\%~3.fxo-mp" (
  del "%~2\%~3.fxo-mp"
 )
 
-rem Macro processor: reads .fxc and outputs .fxc-mp
+rem ADDED Macro processor: reads .fxc and outputs .fxc-mp
 java -jar "%~dp0FXCoreMP.jar" "%~2\%~3.fxc" "%~2\%~3.fxc-mp"
 if not %errorlevel% EQU 0 (
 	echo ERROR running macro processor
@@ -69,7 +69,7 @@ if not %errorlevel% EQU 0 (
 	pause
 )
 
-rem run the preprocessor on the .fxc-mp file, outputs .fxo file
+rem MODIFIED NEXT LINE run the preprocessor on the .fxc-mp file, outputs .fxo file
 "%~dp0FXCorePreProc.exe" -l %4 %~2\%~3.fxc-mp
 if not %errorlevel% EQU 0 (
 	echo ERROR running preprocessor see %~3.fpl
