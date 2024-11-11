@@ -101,7 +101,7 @@ which makes for easier management by version control tools like git. The modifie
 file also returns a status code so if it is called by other batch tools they can know
 when the assembly has failed.
 
-<pre>
+```
 @echo off
 rem --- Modified version of assemble.cmd from the FXCore tools distribution
 rem passed order is: 
@@ -179,7 +179,7 @@ if not %errorlevel% EQU 0 (
 echo Assembly complete, no errors detected
 if %batch%==no pause
 exit /b 0
-</pre>
+```
 
 As can be seen in the above scripts, the basic command to run the FXCoreMP processor is:
 

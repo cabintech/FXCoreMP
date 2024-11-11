@@ -110,7 +110,6 @@ $macro WORD32_BYTES(msb, b2, b1, lsb) (${msb}<<24)|(${b2}<<16)|(${b1}<<8)|${lsb}
 ; etc. Any value is >=3 will branch to the last (default) label.
 ; Uses ACC32.
 $macro SWITCH4(crValue, target0, target1, target2, default) ++
-; Switch on ${crValue}
 jz			${crValue}, ${target0}
 
 cpy_cc		acc32, ${crValue}
