@@ -48,18 +48,16 @@ contain the FXCore executables (FXCoreCmdAsm, FXCorePreroc, etc).
 Modify the FXCore "assemble.cmd" script to run the macro processor as the first step. The lines highlighted
 below in yellow have been added, blue lines have been modified:
 
-```
+```diff
 @rem passed order is: full_current_path current_directory name_part preproc_library_path assembler_directive assembler_directive
 @echo off
 rem if old .fxo exists delete it
 IF EXIST "%~2\%~3.fxo" (
  del "%~2\%~3.fxo"
 )
-```
 
-<pre style="background-color:yellow">
-rem if old .fxo-mp exists delete it
-IF EXIST "%~2\%~3.fxo-mp" (
++rem if old .fxo-mp exists delete it
+-IF EXIST "%~2\%~3.fxo-mp" (
  del "%~2\%~3.fxo-mp"
 )
 
@@ -70,9 +68,7 @@ if not %errorlevel% EQU 0 (
 	color 4F
 	pause
 )
-</pre>
 
-```
 <span style="background-color:cyan">rem run the preprocessor on the .fxc-mp file, outputs .fxo file
 "%~dp0FXCorePreProc.exe" -l %4 %~2\%~3.fxc-mp</span>
 if not %errorlevel% EQU 0 (
