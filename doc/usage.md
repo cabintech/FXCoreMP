@@ -91,17 +91,15 @@ if not %errorlevel% EQU 0 (
 You can also completely replace the assemble.cmd file with the version shown below (and
 provided in the build directory of this repo). This 
 version puts all build artifacts in a bin/ subdirectory, outputs more status information,
-and can be called from another .cmd file for batch builds. If you use this version and
-are using the Notepad++ editor to run the assembler, you will need to modify the editor's
-`shortcuts.xml` file to provide the correct parameters with proper quoting. 
+and can be called from another .cmd file for batch builds.
 
 By placing
-output files in the bin subdirectory generated files are kept separate from source files
+output files in the bin subdirectory, generated files are kept separate from source files
 which makes for easier management by version control tools like git. The modified command
 file also returns a status code so if it is called by other batch tools they can know
 when the assembly has failed.
 
-```
+```winbatch
 @echo off
 rem --- Modified version of assemble.cmd from the FXCore tools distribution
 rem passed order is: 
