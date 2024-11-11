@@ -319,6 +319,6 @@ but must not be recursive (e.g. a macro must not invoke itself directly or or in
 
 See these additional pages for more information:
 
-[Installation and usage](usage.md)<br>
-[Examples](examples.md)<br>
-[Why another preprocessor?](why.md)
+[Installation and usage](doc/usage.md)<br>
+[Examples](doc/examples.md)<br>
+[Why another preprocessor?](doc/why.md)

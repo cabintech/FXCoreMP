@@ -53,7 +53,7 @@ FXCore preprocessor library functions (the equivalent of macros) are in separate
 different format (XML). Note however, FXCoreMP macros are not directly usable in Gooeycore like
 preprocessor library functions.
 2. Arguments for FXCoreMP macros can be positional or named. The named format for macros
-with many parameters can greatly increase the readability of the source code (see [Named Arguments](README.md#named-args)).
+with many parameters can greatly increase the readability of the source code (see [Named Arguments](../README.md#named-args)).
 3. FXCoreMP macros can reference labels outside the macro. The sample SWITCH macros show how
 target label names can be passed as macro arguments, something that is not possible with
 the preprocessor library functions which have strict self-containment rules and lack general
