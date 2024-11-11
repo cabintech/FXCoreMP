@@ -69,8 +69,8 @@ if not %errorlevel% EQU 0 (
 	pause
 )
 
-<span style="background-color:cyan">rem run the preprocessor on the .fxc-mp file, outputs .fxo file
-"%~dp0FXCorePreProc.exe" -l %4 %~2\%~3.fxc-mp</span>
+rem run the preprocessor on the .fxc-mp file, outputs .fxo file
+"%~dp0FXCorePreProc.exe" -l %4 %~2\%~3.fxc-mp
 if not %errorlevel% EQU 0 (
 	echo ERROR running preprocessor see %~3.fpl
 	color 4F
