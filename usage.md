@@ -46,7 +46,7 @@ contain the FXCore executables (FXCoreCmdAsm, FXCorePreroc, etc).
 ## Update Command Line Build Tools
 
 Modify the FXCore "assemble.cmd" script to run the macro processor as the first step. The lines highlighted
-below in yellow have been added, blue lines have been modified:
+below in yellow have been added, blue lines have been modified: 
 
 ```diff
 @rem passed order is: full_current_path current_directory name_part preproc_library_path assembler_directive assembler_directive
