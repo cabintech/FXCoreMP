@@ -65,14 +65,14 @@ public class Stmt {
 		
 		i = text.indexOf(';');
 		if (i>=0) {
-			text = Util.jsSubstring(text, 0, i);
 			if (!isBlockCommentEnd && !isBlockCommentStart) cmnt = Util.jsSubstring(text, i);
+			text = Util.jsSubstring(text, 0, i);
 		}
 		else { // No ; comment
 			i = text.indexOf("//"); // C-style line comment
 			if (i>=0) {
-				text = Util.jsSubstring(text, 0, i);
 				if (!isBlockCommentEnd && !isBlockCommentStart) cmnt = Util.jsSubstring(text, i);
+				text = Util.jsSubstring(text, 0, i);
 			}
 			else { // No line comment
 			}

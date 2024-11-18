@@ -59,10 +59,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class Macro {
+public class Macro implements Constants {
 	
 	private String macroName = null;							// Macro name
-	private List<String> argNames = new ArrayList<String>();	// List of argument names
+	private List<Arg> argNames = new ArrayList<>();				// List of argument name/direction
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
 	private String sourceFile = null;
 	
@@ -101,7 +101,7 @@ public class Macro {
 		else {
 			// Macro has arg list
 			if (paren2 < 1 || paren1 > paren2) {
-				throw new Exception("Invalid macro definition, missing or invalid argument list.");
+				throw new SyntaxException("Invalid macro definition, missing or invalid argument list.");
 			}
 			macroName = Util.jsSubstring(line1, 0, paren1).trim(); // Up to first paren is macro name
 			if (paren2 > paren1+1) { 
@@ -111,7 +111,21 @@ public class Macro {
 					// Extract comma separated list of arg names
 					String names[] = argNameList.split(",");
 					for (String name: names) {
-						argNames.add(name.trim());
+						int dir = DIR_ANY;
+						if (name.endsWith("<=>")) {
+							name = Util.jsSubstring(name, 0, name.length()-3);
+							dir = DIR_INOUT;
+						}
+						else if (name.endsWith("<=")) {
+							name = Util.jsSubstring(name, 0, name.length()-2);
+							dir = DIR_IN;
+						}
+						else if (name.endsWith("=>")) {
+							name = Util.jsSubstring(name, 0, name.length()-2);
+							dir = DIR_OUT;
+						}
+						System.out.println("Macro defn: "+name+" direction "+dir);
+						argNames.add(new Arg(name.trim(), dir));
 					}
 				}
 			}
@@ -123,10 +137,10 @@ public class Macro {
 		}
 		
 		// Enforce macro names so we can reliably parse them in source lines
-		if (macroName.contains("$")) throw new Exception("Macro name cannot contain '$' symbol. Line "+stmt1.getLineNum()+" in file '"+stmt1.getFileName());
+		if (macroName.contains("$")) throw new SyntaxException("Macro name cannot contain '$' symbol. Line "+stmt1.getLineNum()+" in file '"+stmt1.getFileName());
 		for (int i=0; i<macroName.length(); i++) {
 			char c = macroName.charAt(i);
-			if (!Character.isJavaIdentifierPart(c)) throw new Exception("Macro name contains invalid character '"+c+"'. Line "+stmt1.getLineNum()+" in file '"+stmt1.getFileName());
+			if (!Character.isJavaIdentifierPart(c)) throw new SyntaxException("Macro name contains invalid character '"+c+"'. Line "+stmt1.getLineNum()+" in file '"+stmt1.getFileName());
 		}
 		
 		
@@ -136,10 +150,10 @@ public class Macro {
 			Stmt s = defStmts.get(i);
 			String line = s.getText();
 			if (line.startsWith("$macro ")) {
-				throw new Exception("Nested macro definition at line "+s.getLineNum()+" in file '"+s.getFileName()+"'. Maybe missing $endmacro before this?");
+				throw new SyntaxException("Nested macro definition at line "+s.getLineNum()+" in file '"+s.getFileName()+"'. Maybe missing $endmacro before this?");
 			}
 			if (line.startsWith("$include ")) {
-				throw new Exception("Include not allowed in macro definition, line "+s.getLineNum()+" in file '"+s.getFileName()+"'");
+				throw new SyntaxException("Include not allowed in macro definition, line "+s.getLineNum()+" in file '"+s.getFileName()+"'");
 			}
 			macroLines.add(s);
 		}
@@ -155,7 +169,7 @@ public class Macro {
 	 * Returns an unmodifiable list of argument names exactly as given on the $macro statement
 	 * @return
 	 */
-	public List<String> getArgNames() {
+	public List<Arg> getArgNames() {
 		return Collections.unmodifiableList(argNames); 
 	}
 
@@ -178,28 +192,35 @@ public class Macro {
 	 * @param context
 	 * @return
 	 */
-	public List<String> eval(Map<String,String> argValues, Stmt context) throws Exception {
+	public List<String> eval(Map<String,Arg> argValues, Stmt context) throws Exception {
 		
 		// Use case-insensitive map for arg names
-		Map<String, String> treeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		Map<String, Arg> treeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		treeMap.putAll(argValues);
 
 		// All args must be supplied and match definition arg names
 		if (treeMap.size() != argNames.size()) {
-			throw new Exception("Invocation of macro '"+macroName+"' has incorrect number of args.");
+			throw new SyntaxException("Invocation of macro '"+macroName+"' has incorrect number of args.");
 		}
-		for (String name: argNames) {
-			if (!treeMap.containsKey(name)) {
-				throw new Exception("Invocation of macro '"+macroName+"' missing argument named '"+name+"'.");
+		for (Arg argName: argNames) {
+			Arg argValue = treeMap.get(argName.getString()); 
+			if (argValue == null) {
+				throw new SyntaxException("Invocation of macro '"+macroName+"' missing argument named '"+argName.getString()+"'.");
+			}
+			//v1.1 Args must also match direction (positional args are DIR_ANY and match any direction)
+			if (argName.getDirection() != argValue.getDirection()) {
+				if (argName.getDirection()!=DIR_ANY && argValue.getDirection()!=DIR_ANY) {
+					throw new SyntaxException("IN/OUT direction mismatch on argument '"+argName.getString()+"' of macro '"+macroName+"'.");
+				}
 			}
 		}
 		
 		// Add virtual args
 		lastUnique++; // Unique ID at the macro-invocation scope
-		treeMap.put(":unique", lastUnique+"");
-		treeMap.put(":sourcefile", sourceFile);
-		treeMap.put(":sourcefile:root", FXCoreMPMain.srcFile.getName());
-		treeMap.put(":outputfile", FXCoreMPMain.outFile.getName());
+		treeMap.put(":unique", new Arg(lastUnique+"", DIR_ANY));
+		treeMap.put(":sourcefile", new Arg(sourceFile, DIR_ANY));
+		treeMap.put(":sourcefile:root", new Arg(FXCoreMPMain.srcFile.getName(), DIR_ANY));
+		treeMap.put(":outputfile", new Arg(FXCoreMPMain.outFile.getName(), DIR_ANY));
 		
 		// Do argument substitution on each line of the macro defn
 		List<Stmt> genCode = new ArrayList<Stmt>();
@@ -225,17 +246,21 @@ public class Macro {
 	 * @return
 	 * @throws Exception
 	 */
-	private String doArgSubst(String text, Map<String,String> argMap) throws Exception {
+	private String doArgSubst(String text, Map<String,Arg> argMap) throws Exception {
 		
 		// Crude, but since there are only a few args this is ok.
 		//TODO: Does not handle whitespace like "${ myargname }"
 		//TODO: This is case sensitive
-		for (String name: argNames) {
-			text = text.replace("${"+name+"}", argMap.get(name));
+		for (Arg argName: argNames) {
+			String name = argName.getString();
+			text = text.replace("${"+name+"}", argMap.get(name).getString());
 		}
 		
 		// Virtual args (pre-defined substitutions)
-		text = text.replace("${:unique}", argMap.get(":unique"));
+		text = text.replace("${:unique}", argMap.get(":unique").getString());
+		text = text.replace("${:sourcefile}", argMap.get(":sourcefile").getString());
+		text = text.replace("${:sourcefile:root}", argMap.get(":sourcefile:root").getString());
+		text = text.replace("${:outputfile}", argMap.get(":outputfile").getString());
 		
 		return text;
 	}
@@ -259,32 +284,6 @@ public class Macro {
 				expanded.add(stmt.getFullText());
 				continue;
 			}
-			
-//OBSOLETE -- older macro invocation syntax			
-//			
-//			// Macro form: ${mac-name(args)}
-//			while (text.contains("${")) {
-//				// Evaluate nested substitutions inside->out
-//				int end = text.indexOf("}");
-//				int start = Util.jsSubstring(text,0,end).lastIndexOf("${");
-//				if (end < 0 || end < start) {
-//					throw new Exception("Invalid macro invocation, mismatched braces ${} '"+text+"'");
-//				}
-//				String evalText = Util.jsSubstring(text, start+2, end).trim(); // Everything between '${' and '}'
-//				List<String> macExpanded = Macro.evalMacroInvocation(evalText);
-//				// The first line of expansion replaces the macro invocation in the current line. Any additional lines are added immediately following
-//				if (macExpanded.size() == 0) {
-//					text = text.substring(0, start) + text.substring(end+1); // Macro expanded to nothing
-//				}
-//				else if (macExpanded.size() == 1) {
-//					text = text.substring(0, start) + macExpanded.get(0) + text.substring(end+1); // Single string result replaced macro invocation
-//				}
-//				else {
-//					// Any multi-line expansion replaces the source line without any farther nested expansion
-//					text = ""; // Current line is replaced
-//					expanded.addAll(macExpanded);
-//				}
-//			}
 			
 			// Macro form: $mac-name<white-space> or $mac-name() or $mac-name(args)
 			
@@ -317,7 +316,7 @@ public class Macro {
 						break; // Stop at first non-identifier char
 					}
 				}
-				if (macroName.length()<1) throw new Exception("Missing or invalid macro name in '"+text+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+				if (macroName.length()<1) throw new SyntaxException("Missing or invalid macro name in '"+text+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 				
 				// c is the first char after the macro name
 				
@@ -327,7 +326,7 @@ public class Macro {
 					// The macro invocation has an arg list. Since we are evaluating macros inside-out, the arg
 					// list has no macros in it, just literal text.
 					String argListText = extractArgList(text, nameEnd);
-					if (argListText == null) throw new Exception("Invalid macro argument list '"+text+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+					if (argListText == null) throw new SyntaxException("Invalid macro argument list '"+text+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 					args = Util.split(argListText, ",");
 					end = nameEnd + argListText.length() + 2; // start + name + args + parens + $ char
 				}
@@ -407,80 +406,6 @@ public class Macro {
 	}
 	
 	/**
-	 * Given a macro invocation like "MacroName(arg1, arg2, arg3)" return the evaluation of the
-	 * named macro with the given arg values. The arg values must be simple comma delimited literal text with no embedded
-	 * substitutions. This assumes the surrounding ${...} has already been removed.
-	 * 
-	 * TODO: Assuming simple comma-delimited arg values. May need to handle arg values with commas in them? 
-	 * 
-	 * @param evalText
-	 * @return
-	 */
-	public static List<String> evalMacroInvocation(String evalText) throws Exception {
-	
-		evalText = evalText.trim();
-		int openParen = evalText.indexOf('(');
-		int closingParen = evalText.lastIndexOf(')');
-		String macroName = "";
-		String macroArgs = "";
-		
-		try {
-			if (openParen < 0) {
-				// No opening paren means zero args for this invocation. The text is just the macro name.
-				macroName = evalText;
-			}
-			else {
-				// Sanity check
-				if (closingParen!=evalText.length()-1) {
-					throw new Exception("Invalid arg list format on macro invocation '"+evalText+"'");
-				}
-				macroName = Util.jsSubstring(evalText, 0, openParen);
-				macroArgs = Util.jsSubstring(evalText, openParen+1, closingParen);
-			}
-			
-			// Find macro to be evaluated
-			Macro m = FXCoreMPMain.macroMap.get(macroName);
-			if (m == null) {
-				throw new Exception("No definition found for macro name '"+macroName+"' from '"+evalText+"'");
-			}
-	
-			String arglist[] = Util.split(macroArgs.trim(), ",");
-			Map<String,String> argNameValueMap = new HashMap<>();
-			if (macroArgs.indexOf('=') < 0) {
-				// No equal signs in the args, so assume positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
-				if (arglist.length != m.getArgNames().size()) {
-					throw new Exception("Number of positional arguments ("+arglist.length+") does not match macro definition ("+m.getArgNames().size()+").");
-				}
-				for (int i=0; i<arglist.length; i++) {
-					String argName = m.getArgNames().get(i);
-					argNameValueMap.put(argName, arglist[i].trim());
-				}
-			}
-			else {
-				// Named args
-				for (String argSpec: arglist) {
-					if (argSpec.trim().length()==0) continue; // Skip any blank specs
-					// Each specification is of the form "argname=argvalue".
-					String namevalue[] = argSpec.split("=");
-					if (namevalue.length < 2 || namevalue[0].trim().length()==0 || namevalue[1].trim().length()==0) {
-						throw new Exception("Invalid argName=argValue specification '"+argSpec+"' in '"+evalText+"'");
-					}
-					// Add to arg map
-					argNameValueMap.put(namevalue[0].trim(), namevalue[1].trim());
-				}
-			}
-			
-			return m.eval(argNameValueMap, null);
-		}
-		catch (Throwable t) {
-			System.out.println("Failed while evaluating: '"+evalText+"'");
-			throw t;
-		}
-		
-	}
-
-	
-	/**
 	 * Given a macro name and list of argument specifications, return the evaluation of the
 	 * named macro with the given arg values. The arg values must be simple comma delimited literal text with no embedded
 	 * substitutions. Arg specs can be named arguments 'argname1=value1, argname2=value2' or positional 'value1, value2'.
@@ -494,16 +419,16 @@ public class Macro {
 		// Find macro to be evaluated
 		Macro m = FXCoreMPMain.macroMap.get(macroName);
 		if (m == null) {
-			throw new Exception("No definition found for macro '"+macroName+"' in '"+stmt.getFullText()+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+			throw new SyntaxException("No definition found for macro '"+macroName+"' in '"+stmt.getFullText()+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 		}
 		
 		// Verify number of args
 		if (args.length != m.getArgCount()) {
-			throw new Exception("Number of arguments ("+args.length+") does not match macro definition ("+m.getArgNames().size()+") of macro '"+macroName+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+			throw new SyntaxException("Number of arguments ("+args.length+") does not match macro definition ("+m.getArgNames().size()+") of macro '"+macroName+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 		}
 
 		// Build map of arg names to values
-		Map<String,String> argNameValueMap = new HashMap<>();
+		Map<String,Arg> argNameValueMap = new HashMap<>();
 
 		int numPosArgs = 0;
 		int numNamArgs = 0;
@@ -512,18 +437,39 @@ public class Macro {
 			// Support named and positional args. All args must be one or the other but not mixed.
 			if (argText.indexOf('=') < 0) {
 				// No equal signs in the arg, so assume positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
-				if (numNamArgs > 0) throw new Exception("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
-				String argName = m.getArgNames().get(argNum);	// Name from macro definition
-				argNameValueMap.put(argName, argText.trim()); 	// Value is the argument text
+				if (numNamArgs > 0) throw new SyntaxException("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+				String argName = m.getArgNames().get(argNum).getString();		// Name from macro definition
+				argNameValueMap.put(argName, new Arg(argText.trim(), DIR_ANY));	// Value is the argument text, positional args are always DIR_ANY
 			}
 			else {
 				// Named argument of the form 'argname=argvalue'.
-				if (numPosArgs > 0) throw new Exception("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
-				int eqPos = argText.indexOf('=');
-				String argName = Util.jsSubstring(argText, 0, eqPos).trim(); // Name is left of equal
-				String argValue= Util.jsSubstring(argText, eqPos+1).trim();  // Value is right of equal (can be empty string)
-				if (argName.length()==0) throw new Exception("Invalid argName=argValue specification '"+argText+"' in invocation of macro '"+macroName+"'. Line"+stmt.getLineNum()+" in "+stmt.getFileName());
-				argNameValueMap.put(argName, argValue);
+				if (numPosArgs > 0) throw new SyntaxException("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+				
+				//v1.1 Allow in/out direction indicators
+				int dir = DIR_INOUT;
+				String namevalue[] = Util.split(argText, "<=>");
+				if (namevalue.length < 2) {
+					dir = DIR_IN;
+					namevalue = Util.split(argText, "<=");
+					if (namevalue.length < 2) {
+						dir = DIR_OUT;
+						namevalue = Util.split(argText, "=>");
+						if (namevalue.length < 2) {
+							dir = DIR_ANY;
+							namevalue = Util.split(argText, "=");
+						}
+					}
+				}
+				
+				if (namevalue.length < 2 || namevalue[0].trim().length()==0 || namevalue[1].trim().length()==0) {
+					throw new SyntaxException("Invalid argName=argValue specification '"+argText+"'. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
+				}
+				
+				String argName = namevalue[0].trim(); // Name is left of equal
+				String argValue= namevalue[1].trim(); // Value is right of equal
+				
+				System.out.println(argName + " is direction " + dir);
+				argNameValueMap.put(argName, new Arg(argValue, dir));
 			}
 		}
 

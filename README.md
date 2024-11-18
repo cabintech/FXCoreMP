@@ -4,6 +4,8 @@ how the C/C++ preprocessor adds macro capabilities to C and C++ language files. 
 of this processor, an attempt was made to leverage the C preprocessor for this purpose. Shortcomings of that
 approach inspired the creation of this preprocessor specifically designed for the FXCore assembly language.
 
+As of V1.1, it also adds an optional [Target Of Operation Notation (TOON)](toon.md) alternative assembler syntax.
+
 This processor reads an FXCore assembler source file (usually named "*.fxc") and writes an output file which is
 a modified version of the input. Modifications are made by the processing of macro statements in the source
 file. The FXCoreMP processor is a textual substitution system, it does not evaluate mathematical expressions or

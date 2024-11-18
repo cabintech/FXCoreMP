@@ -33,6 +33,11 @@ public class Util {
 		return jsSubstring(s, index1, s.length());
 	}
 	
+	public static String[] split(String s, String regex, int maxParts) {
+		if (s.trim().length() == 0) return new String[0]; // Unlike String.split(), return zero elements on empty input
+		return s.split(regex, maxParts);
+		
+	}
 	/**
 	 * Same as String.split() but smarter handling of empty input.
 	 * @param s
@@ -40,8 +45,7 @@ public class Util {
 	 * @return
 	 */
 	public static String[] split(String s, String regex) {
-		if (s.trim().length() == 0) return new String[0]; // Unlike String.split(), return zero elements on empty input
-		return s.split(regex);
+		return split(s, regex, 0);
 	}
 	
 	public static void info(String info) {
