@@ -12,7 +12,11 @@
   </tr>
   <tr>
     <td>`&lt;target&gt; = &lt;source&gt;`</td>
-    <td>```<br>.rn myReg r4<br><br>myReg = MR102<br>R0 = SWITCH<br>```</td>
+    <td>
+    
+```.rn myReg r4```<br>```myReg = MR102```<br>```R0 = SWITCH```
+
+</td>
     <td>Supported combinations<br>CR = CR<br>CR = MR<br>CR = SRF<br>MR = CR<br>SRF = CR</td>
   </tr>
   <tr>
