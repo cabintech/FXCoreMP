@@ -8,7 +8,9 @@
   </tr></thead>
 <tbody>
   <tr>
-    <td colspan="3">*Register to Register Copy Statements*</td>
+    <td colspan="3">
+*Register to Register Copy Statements*
+</td>
   </tr>
   <tr>
     <td>`&lt;target&gt; = &lt;source&gt;`</td>
