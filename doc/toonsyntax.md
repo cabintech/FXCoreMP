@@ -1,5 +1,7 @@
 # TOON Syntax
 
+![plot](./table.svg)
+
 <table><thead>
   <tr>
     <th>Statement Syntax</th>
