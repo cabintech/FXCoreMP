@@ -16,7 +16,7 @@ in text substitution. There is some limited conditional processing (see `$set` a
 
 FXCoreMP treats macro names, argument names, and if-conditions, as *case-insensitive*.
  
-The FXCoreMP macro language supports the following statements:
+The FXCoreMP macro language supports the following statements: <!-- https://www.tablesgenerator.com/markdown_tables -->
 | Description                                         | Macro Syntax           |
 |------------------------------------------------|------------------------|
 | Macro definition       | ```$macro <name>(argname1,argname2,...)```<br>```$endmacro``` |

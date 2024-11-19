@@ -225,7 +225,7 @@ additional step in the tool chain.
 
 ## Background
 
-Since the inception of assembly languages [in 1947](https://en.wikipedia.org/wiki/Assembly_language), they have been cryptic and rigid in their
+Since their inception [in 1947](https://en.wikipedia.org/wiki/Assembly_language) assembler languages have been cryptic and rigid in their
 syntax. Machine instructions are represented with short mnemonics and a statement format that is uniform with something like:
 ```
 <label> <mnemonic> <op1>,<op2>
