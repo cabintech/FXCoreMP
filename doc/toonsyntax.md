@@ -1,6 +1,6 @@
 # TOON Syntax
 
-![plot](./table.svg)
+[plot](./table.svg)
 
 <table><thead>
   <tr>
