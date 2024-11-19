@@ -8,6 +8,11 @@ The TOON syntax can be freely mixed with regular FXCore assembler language synta
 can be used exclusively, sparsely, or not at all. The macro processor will translate all
 TOON statements into valid FXCore assembler in it's output stream.
 
+Conceptually TOON is a separate operation on the source code than the macro processor.
+TOON syntax can be used with or without macro, and macros can be used with or without
+TOON statements. By default TOON translation is run as the last step of the macro
+processor, but it can also be run as a stand alone tool.
+
 We have found even the act of re-formatting our existing FXCode into TOON statements has
 improved our ability to modify, maintain, and develop new code features with less
 time consulting the FXCore instruction set documentation. Data movement and code
