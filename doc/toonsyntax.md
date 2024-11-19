@@ -1,20 +1,18 @@
 # TOON Syntax
 
-[plot](./table.svg)
-
 <table><thead>
   <tr>
-    <th>Statement Syntax</th>
-    <th>Examples</th>
-    <th>Comments</th>
+    <th>*Statement Syntax*</th>
+    <th>*Examples*</th>
+    <th>*Comments*</th>
   </tr></thead>
 <tbody>
   <tr>
-    <td colspan="3">Register to Register Copy Statements</td>
+    <td colspan="3">*Register to Register Copy Statements*</td>
   </tr>
   <tr>
-    <td>&lt;target&gt; = &lt;source&gt;</td>
-    <td style="color:red;">.rn myReg r4<br><br>myReg = MR102<br>R0 = SWITCH</td>
+    <td>`&lt;target&gt; = &lt;source&gt;`</td>
+    <td>```<br>.rn myReg r4<br><br>myReg = MR102<br>R0 = SWITCH<br>```</td>
     <td>Supported combinations<br>CR = CR<br>CR = MR<br>CR = SRF<br>MR = CR<br>SRF = CR</td>
   </tr>
   <tr>
