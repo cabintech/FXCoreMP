@@ -106,26 +106,26 @@ being updated (explicitly in the list of operands, or implicitly by the definiti
 Consider the following assembler code:
 
 ```
-cpy_cs	      acc32,in0		 
-wrdel       delaymem0,acc32	
-cpy_cs	      acc32,in1		
-wrdel       delaymem1,acc32	
-cpy_cs	      temp,pot0_smth	
-wrdld       temp1,delayLen	
-multrr	      temp,temp1		
-cpy_cc	      scaleFactorMin,acc32
-cpy_cs	      temp,pot1_smth		
-wrdld       temp1,delayLen		
-multrr	      temp,temp1		 
-cpy_cc	      scaleFactorMax,acc32
+cpy_cs      acc32,in0
+wrdel       delaymem0,acc32
+cpy_cs      acc32,in1
+wrdel       delaymem1,acc32
+cpy_cs      temp,pot0_smth
+wrdld       temp1,delayLen
+multrr      temp,temp1
+cpy_cc      scaleFactorMin,acc32
+cpy_cs      temp,pot1_smth
+wrdld       temp1,delayLen
+multrr      temp,temp1
+cpy_cc	    scaleFactorMax,acc32
 subs        scaleFactorMax,scaleFactorMin
-jgez        acc32,save_range		 
-cpy_cc	      temp,scaleFactorMax	
-cpy_cc	      scaleFactorMax,scaleFactorMin
-cpy_cc      scaleFactorMin,temp		
-abs	         acc32
-save_range: 
-cpy_cc	      scaleFactorRange,acc32
+jgez        acc32,save_range
+cpy_cc	    temp,scaleFactorMax
+cpy_cc	    scaleFactorMax,scaleFactorMin
+cpy_cc      scaleFactorMin,temp
+abs	    acc32
+save_range:
+cpy_cc	    scaleFactorRange,acc32
 ```
 
 Where (or is) the register named `scaleFactorMax` modified by this code? 
@@ -241,10 +241,10 @@ This project is an attempt to loosen the traditional rigid rules for assembly la
 development and interpretation of source code. There is no logical reason modern assembly needs to
 be cryptic with a fixed uniform format. There is plenty of processing power on the machines used to build
 assembler code to provide a richer syntax and something closer to a high level language experience. This
-is not a new concept, the roots of [High Level Assembly (HLA)[(https://en.wikipedia.org/wiki/High_Level_Assembly) are from the 1990's.
+is not a new concept, the roots of [High Level Assembly (HLA)](https://en.wikipedia.org/wiki/High_Level_Assembly) are from the 1990's.
 
 HLAs in their modern form are exhibited in [HLA v2](https://www.randallhyde.com/AssemblyLanguage/HighLevelAsm/index.html) which 
 has goals very similar to this project. However 
 the abstractions and implementation are much too complex to implement in the FXCore instruction set. HLA is more oriented to
 general purpose computers than specialty processors like DSPs. For this project it seemed much simpler to
-expand the macro processor to recognize an alternate (and yet still simple) syntax.
+expand the macro processor to recognize a more expressive (and yet still simple) syntax.
