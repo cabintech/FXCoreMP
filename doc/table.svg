@@ -4,7 +4,7 @@
     <body xmlns="http://www.w3.org/1999/xhtml">
       <table>
       	<tbody>
-      		<tr><td>Hello1></td><td>Hello2</td></tr>
+      		<tr><td style="color:red;">Hello1</td><td>Hello2</td></tr>
       	</tbody>
       </table>
     </body>
