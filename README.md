@@ -4,9 +4,11 @@ how the C/C++ preprocessor adds macro capabilities to C and C++ language files. 
 of this processor, an attempt was made to leverage the C preprocessor for this purpose. Shortcomings of that
 approach inspired the creation of this preprocessor specifically designed for the FXCore assembly language.
 
-As of V1.1, it also adds an optional [Target Of Operation Notation (TOON)](doc/toon.md) alternative assembler syntax.
+As of V1.1, the FXCoreMP processor also supports an optional [Target Of Operation Notation (TOON)](doc/toon.md) alternative assembler syntax.
+The TOON syntax can be freely mixed with FXCore assembler syntax and can greatly increase the
+readability and intuitive understanding of FXCore assembler source code. See the [TOON](doc/toon.md) page for details.
 
-This processor reads an FXCore assembler source file (usually named "*.fxc") and writes an output file which is
+FXCoreMP reads an FXCore assembler source file (usually named "*.fxc") and writes an output file which is
 a modified version of the input. Modifications are made by the processing of macro statements in the source
 file. The FXCoreMP processor is a textual substitution system, it does not evaluate mathematical expressions or
 perform higher level functions. Although the macro nesting and arguments can be elaborate, ultimately it results
@@ -18,8 +20,8 @@ The FXCoreMP macro language supports the following statements:
 | Description                                         | Macro Syntax           |
 |------------------------------------------------|------------------------|
 | Macro definition       | ```$macro <name>(argname1,argname2,...)```<br>```$endmacro``` |
-| Macro invocation       | ```$<name>(arg1,arg2,...)```                         |
-| Imbed a file           | ```$include <filename>``` |
+| Macro invocation       | ```$<name>(val1,val2,...)```<br>```$<name>(arg1=val1,arg2=val2,...)```  |
+| Embed a file           | ```$include <filename>``` |
 | Set env value          | ```$set <envparm>=<value>```                           |
 | Conditional processing | ```$if (<envparm>=<value>)```<br>```$if (<envparm>!=<value>)```<br>```$endif```     |
 
@@ -61,6 +63,36 @@ $macro MAKE_LABEL(prefix, name, postfix)  ${prefix}${name}${postfix}
 ```
 If this macro were invoked with the argument values "a", "b", and "c" the result would be "abc".
 
+A macro definition argument may optionally include a direction indicator. This indicates to the user of the
+macro if the argument is an input, an output, or bidirectional. The direction indicator immediately follows
+the argument name. The postfix indicators are:
+- `=>` the argument is an output of the macro
+- `<=` the argument is an input to the macro
+- '<=>' the argument is both an input and an output
+
+Direction indicators are very useful when macro arguments are registers because it clarifies if the register
+is expected to have a value which is used in the macro, or it will contain a value returned from the macro
+(e.g. the executed of the macro code leaves a result in the output register). 
+
+```
+$macro COPY_CMX_TO_MR(mrTarget=>, crMRSource<=, crTemp=>) ++
+${crTemp}   = ${crMRSource} 
+${mrTarget} = ${crTemp}
+$endmacro
+```
+
+In this macro definition the first argument is an output, the second is an input, and the third is
+considered an output. Not only does this document the intent of the arguments, it can be used to validate
+the macro invocation (see the invoication section below).
+
+Note that the TOON processor does not enforce or validate the direction indicators with the actual macro code. 
+The expanded macro code can update
+an input register or read from an output register. It is up to the macro developer to insure the argument
+direction indicators are accurate.
+
+If a macro definition argument has no direction indicator, it is presumed to have no defined direction and
+may be used as an input, output, or both.
+
 ## Multi-Line Macro Definitions
 
 A macro definition may define a *multi-line* (as opposed to *inline*) macro. A multi-line macro replaces the entire
@@ -96,7 +128,7 @@ target location for it.
 ; Macro to subtract a fixed number of samples from the delay stored
 ; in an MR. If the result is less than zero, the delay is set to zero.
 ;
-$macro SUBTRACT_DELAY(delayMR, samples, crTemp) ++
+$macro SUBTRACT_DELAY(delayMR<=>, samples<=, crTemp=>) ++
 ;---START SUBTRACT_DELAY
 cpy_cm    ${crTemp}, ${delayMR}    ; Get calculated delay
 wrdld     acc32, samples           ; Get number of samples to deduct
@@ -117,6 +149,11 @@ substituted value is unique across all macros and all invocations, it is OK if t
 use the same generated label names (e.g. another macro could define a label `sub_ok_${:unique}`
 and it would not create any conflict with the macro above).
 
+Also note the use of the `<=>` input/output indicator on the first argument which helps make it
+clear that the delayMR is read by the macro, and also written by the macro. The second argument
+is noted as an input and is not written. The last argument is a temp working register and is
+noted as an output because its value will be altered by the macro.
+
 ### ${:sourcefile}
 This substitutes the name of the source file where this macro definition was
 created. This is only the file name and does not include the path.
@@ -129,7 +166,7 @@ first file on the command line). This is only the file name and does not include
 This substitutes the name of the output file (e.g. the
 second file on the command line). This is only the file name and does not include the path.
 
-# Macro Invocation (Evaluation)
+# Macro Invocation (Evaluation) <a id="macro-invocation"></a>
 
 A macro invocation is indicated in the source text by a "$" character followed by the macro name, 
 optionally followed by a comma-delimited list of values for the macro arguments. Macro
@@ -204,7 +241,7 @@ $CALC_DELAY(r0, r6, r8, r9, r12)
 
 It would be necessary to find and read the macro definition to have any idea
 about what the arguments are, and if the correct registers are being used. In this case the code
-can be made more readable by using named arguments in the invocation. A named argument is the
+can be made more readable by using named arguments in the invocation. In it's simplest form a named argument is the
 argument name (from the macro definition) followed by the "=" character, and then the 
 argument value.
 
@@ -222,6 +259,47 @@ $CALC_DELAY(tempReg1=r9, tempReg2=r12, offset=r6, buffer_base=r0, cv=r8)
 
 Argument names must match the names used in the macro definition, but are *not* case sensitive.
 Positional and named arguments cannot be mixed in the same macro invocation.
+
+Named arguments can also carry *direction* information. The use of named
+arguments makes matching registers to the correct macro arguments easy, but it does not say
+anything about how the registers are used (e.g. are they an input read by the macro, or an
+output written by the macro). Direction indicators provide a visual clue about how the
+argument is used and aid in understanding how to use the macro.
+
+Direction indicators can be placed in the macro definition:
+
+```
+$macro COPY_SFR_TO_MR(mr=>, sfr<=) ++
+acc32 = ${sfr} 
+${mr} = acc32 
+$endmacro
+```
+The `=>` postfix on the first argument denotes this argument as an output, e.g. it's value will
+be written (updated) by the macro. The second argument has a `<=` postfix indicating this is
+an input argument and it's value will not be modified by the macro code.
+
+The invocation of the macro can document the direction by using the same indicators in the
+named argument format:
+
+```
+$COPY_SFR_TO_MR(mr=>mr106, sfr<=TAPTEMPO)
+```
+
+The named argument syntax plus the direction indicator make it clear that the first
+argument is a memory register and it will be updated, and the second argument is a
+special function register that will be used as input to the macro.
+
+If the direction indicator used on the macro invocation does not match the indicator
+of the macro definition, the macro processor will flag a syntax error. This helps insure
+the user of a macro has the same understanding as the author. For example, the following
+would be a syntax error:
+
+```
+$COPY_SFR_TO_MR(mr<=>mr106, sfr<=TAPTEMPO)
+```
+
+Using the named arguments and direction indicator features together
+helps makes the code more self-documenting and macro usage less error prone.
 
 # SET/IF Conditional Processing
 

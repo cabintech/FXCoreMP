@@ -124,7 +124,7 @@ public class Macro implements Constants {
 							name = Util.jsSubstring(name, 0, name.length()-2);
 							dir = DIR_OUT;
 						}
-						System.out.println("Macro defn: "+name+" direction "+dir);
+						//System.out.println("Macro defn: "+name+" direction "+dir);
 						argNames.add(new Arg(name.trim(), dir));
 					}
 				}
@@ -468,7 +468,7 @@ public class Macro implements Constants {
 				String argName = namevalue[0].trim(); // Name is left of equal
 				String argValue= namevalue[1].trim(); // Value is right of equal
 				
-				System.out.println(argName + " is direction " + dir);
+				//System.out.println(argName + " is direction " + dir);
 				argNameValueMap.put(argName, new Arg(argValue, dir));
 			}
 		}
