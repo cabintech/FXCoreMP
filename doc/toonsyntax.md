@@ -13,8 +13,12 @@
 </td>
   </tr>
   <tr>
-    <td>`&lt;target&gt; = &lt;source&gt;`</td>
     <td>
+```
+&lt;target&gt; = &lt;source&gt;
+```
+</td>
+<td>
     
 ```
 .rn myReg r4
