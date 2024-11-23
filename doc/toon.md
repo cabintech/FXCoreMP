@@ -13,7 +13,7 @@ TOON syntax can be used with or without macros, and macros can be used with or w
 TOON statements. By default TOON translation is run as the last step of the macro
 processor, but it can also be run as a stand alone tool.
 
-We found that re-formatting our existing FXCode into TOON statements has
+We found that re-formatting our existing FXCore assembly code into TOON statements has
 improved our ability to modify, maintain, and develop new code features with
 fewer errors and less
 time consulting the FXCore instruction set documentation. Data movement and code
@@ -57,7 +57,9 @@ understood without consulting the details of the <code>xor</code> machine instru
   be inferred.
 </blockquote>
 
-The TOON processor will validate that the target of assignment statements are valid
+See [32-Bit Operations](#32-bit-math-shift-logic-functions) for more details on these types of TOON statements.
+
+The TOON processor will validate that the target of such operation assignment statements are valid
 for the operation being performed. E.g. the XOR operation can only target the
 32-bit accumulator, so if anything other then "acc32" appears as the target of that
 instruction, an error will be flagged.
@@ -77,8 +79,8 @@ be easier to understand, a through understanding of FXCore instructions is still
 
 TOON formated code can be (subjectively) easier to read and understand-at-a-glance. TOON seeks to make
 the semantics of assembler code expicit, clear, and intuitive for progammers. Traditional assembler code
-uses the same basic `opcode operand,operand` format for all statements no matter what they do. So
-there is no visual distinction between assignments, data operations, conditional branches, etc. In higher
+uses the same basic `opcode operand,operand` format for all statements no matter what they do. 
+There is no visual distinction between assignments, data operations, conditional branches, etc. In higher
 level languages those constructs have very different syntax. This helps with intuitive 
 understanding of the code structure. Not having that syntactic visual aid makes assembler harder
 to read and understand. (For more on the concepts of 'high level assembler' see the [Backgound](#background) section).
@@ -121,9 +123,9 @@ Consider the following assembler code:
 20. cpy_cc      scaleFactorRange,acc32
 ```
 
-Where (or is) the register named `scaleFactorMax` modified by this code? 
-To answer that question some careful reading of the code is required. The symbol `scaleFactorMax` appears in several
-places, but do any of those update it's value? Even finding it in all the lists of operands takes some careful reading.
+Is the register named `scaleFactorMax` modified by this code? If so, where? 
+To answer those basic questions require some careful reading of the code. The symbol `scaleFactorMax` appears in several
+places, but do any of those update it's value? Even finding that symbol in all the lists of operands takes some careful reading.
 
 That same block of code in TOON format:
 
@@ -160,27 +162,29 @@ That same block of code in TOON format:
 ```
 
 This is recognizable as a series of assignment and conditional branching statements. Just scan the left column and where you
-find `scaleFactorMax' you know that it is modified by that instruction (2 places are easy to find in the sample above).
+find `scaleFactorMax' you know that it is modified by that instruction (lines 12 and 16 are easy to spot).
 
 The example also show some other features of the TOON syntax. 
 * The assignment in line 1 is from an SFR (IN0) to a core
 register (ACC32). TOON determins that the assembler instruction `cpy_cs` is required and generates the approprate
-assembler statement.
-* In line 4, ACC32 is written to delay memory by an ''indirect'' constant address. Delay memory addressing is indicated by the parens.
-* In line 6, a 16 bit constant value is assigned to the upper part of register temp1. The ".U" postfix makes it clear what the
-assignment is doing.
+assembler statement. See [Assignment Statements](#Assignments) section below. The TOON assignment statement has
+addtional capabilities:
+  + In line 4, ACC32 is written to delay memory by an ''indirect'' constant address. Delay memory addressing is indicated by the parens.
+  + In line 6, a 16 bit constant value is assigned to the upper part of register temp1. The ".U" postfix makes the semantics of
+this special assignment clear.
 * The multiply on line 7 uses `MULT` which is not an FXCore instruction but is understood by
 TOON to implement a multiply operation on the 2 operands. TOON infers the proper FXCore instruction and generates
 the proper assembly instruction (`multrr` in this case because both operands are core registers). There are several
-such generic TOON operators to reduce the distracting detail in the code.
-* The conditional branch on line 14 is written as a familier "if" statement.
+such generic TOON operators to reduce the distracting detail in the code. See the [TOON Syntax Reference](Toon-Syntax-Reference) for other
+inferred instructions.
+* The conditional branch on line 14 is written as a familier "if" statement. (See [Branching](#Branching) section below).
 
 Many of these features are described in the following sections.
 
 ## Assignment statements
 
 The backbone of all computer languages is data movement, or 'copy/load/store' instructions. The
-well understood syntax of using the '=' symbol to denote assignment is common in many
+well understood syntax of using the `=` symbol to denote assignment is common in many
 languages. However in FXCore assembler (and most assembler languages), copy instructions
 adhere to the rigid `<opcode> <operand>,<operand>` format:
 ```
@@ -220,19 +224,33 @@ Parens are used indicate indirect delay memory operations such as:
 ```
 This assignment write the contents of the register ACC32 to the delay memory location
 contained in R0. E.g. R0 is an indirect reference to a delay memory location. TOON will
-generate a `wrdelx` instruction for this assigment.
-
+generate a `wrdelx` instruction for this assigment. TOON supports all the FXCore delay
+addressing modes:
+* Immediate load <code>Rx = (addr)</code> or store <code>(addr) = Rx</code>
+* Indirect load <code>Rx = (Ry)</code> or store <code>(Rx) = Ry</code>
+* Absolute (no AGU) indirect load <code>Rx = @(Ry)</code> or store <code>@(Rx) = Ry</code>
+### Memory Register Assignments
+In addition to the simple assignment of memory registers to/from core registers, e.g.
+```
+mr101 = acc32
+```
 The FXCore also supports indirect reading (not writing) of memory registers. This is
-represented in TOON in a similar way, but using square brackets:
+represented in TOON in a similar way to indirect delay memory, but using square brackets
+instead of parens:
 ```
 r5 = [r1]
 ```
-This load the memory register addressed by the content of R1 into register R5.
+This load the memory register addressed by the content of R1 into register R5. Note that
+the reverse is not supported:
+```
+[r5] = r1 ; NOT supported by FXCore
+```
+
 ### 64/32 Bit Assignments
 FXCore also provides instructions for transferring 32 bit words between core
 registers and the upper and lower half of the 64 bit accumulator (ACC64). Rather than
 lookup those nmemonics, TOON assignment statements can generate the proper assembler code
-from easy to write code such as:
+from easy to write assignment statements such as:
 ```
 acc64.u = r5
 ```
@@ -241,12 +259,65 @@ half of ACC64. Likewise simple assignements transfer data the other way:
 ```
 acc32 = acc64.l
 ```
+See the [Syntax Reference](#Syntax) for all the 64 bit assignment statements.
+
+## 32-Bit Math, Shift, Logic functions
+Data manipulation makes up the bulk of most FXCore assembler programs, so improving the intuitive reading and understanding of the
+semantics from the source code is very useful.
+
+TOON provides a more readable and intuitive syntax for the FXCore 32-bit data operations such as math functions, bitwise functions, and logic functions.
+These statements are written as assignments with functional expressions because they both modify data and move (copy) it to a specific location (ACC32). The statement
+syntax makes this implicit copy operation explicit in the assignment syntax. They also place the instruction (function) between the operands like:
+```
+acc32 = r4 xor r9
+acc32 = acc32 sl r8 ; Correct instruction will be inferred
+acc32 = r0 andi 0xF
+```
+This gives move of a high level programming expression syntax to these instructions. The function between the 2 operands can be any of the 
+FXCore 32-bit math or logic instruction nmemonics. TOON extends some mnemonics to make them generic, and then generates a correct mnemonic
+by inferrence from the operand types. For example the 2nd statement above shows the "SL" instruction but the right side is a register
+so the correct mnemonic should be "SLR". TOON recognizes "SL" as a inferrable instruction and substitutes the correct mnemonic. The
+32-bit data instructions that TOON can infer are:
+```
+OR
+AND
+XOR
+SL
+SR
+MULT
+```
+See the [Syntax Reference](Syntax#32bit) for all the 32 bit operation statements.
+(Note a future version may support symbols `+ & | * << >>` for common operations like ADD, AND, OR, MULT, SHIFT, etc).
+
+## 64-Bit Summation Operations
+
+The FXcore has a number of instructions that accumulate (sum) results in the 64 bit accumulator. These instructions
+can be used in TOON statements with the same assignment-expression syntax as [32-Bit Operations](#32-bit-math-shift-logic-functions). However, for source
+code clarity, a `+=` assignment operator can be used as a reminder that the operation is not a straight assginment of
+the expression results, but it is also a summation (add) of the current ACC64 value. This type of syntax is common
+in high level languages as a shorthand for writing `a = a + b`. Many languags allow this to be written as `a += b`.
+
+These statement are written as assignments with the target of ACC64. The `+=` notation is optional, they can also
+be written with just the `=` symbol:
+```
+acc64 += R0 macrr R1
+acc64 += R8 machri -0.7
+acc64 = r8 macr -0.3
+```
+We recommend using the `+=` symbol for the added clarity. 
+
+Note that the last statement uses a non-existant
+nmemonic `macr`. Similar to the 32 bit operations, some generic inferred functions are recognized by TOON
+and the proper FXCore instruction is generated by inferrence from the operands. In the case of the last
+statement above, TOON will generate the immediate instruction `macri`.
+
+See the [Syntax Reference](Syntax#64bit) for all the 64 bit operation statements.
 
 ## Branching
 
 Like assignments, basic assembler syntax for branching uses the same syntax as all other statements. TOON allows conditional
-branching to be express in a more familiar IF statement syntax with clearly readable conditions. In the example above,
-an assembler statement:
+branching to be express in a more familiar `IF` statement syntax with clearly readable conditions. For example the
+assembler statement:
 ```
 jgez        acc32,save_range		 
 ```
@@ -256,26 +327,70 @@ is rewritten as:
 if acc32 >=0 goto save_range
 ```
 
-This syntax is different than assignments and other operations, so the branch points in the code are obvious. The test
-condition and how it operates is clear from the statement format. The `goto` token in the IF statement is
-optional and can be omitted. The condition can be written in expression notation as shown above, or by using
-the assembler mnemonic such as `jgez' or the just the condition part of the mnemonic 'gez'. The following are
+This TOON syntax is different than assignments and other operations, so the branch points in the code are obvious. The test
+condition uses familer boolean expression operators and how it operates is clear from the statement format. The `goto` token in the IF statement is
+optional and can be omitted. The condition can be written with boolean operators as shown above, or by using
+the assembler mnemonic such as `jgez` or just the condition part of the mnemonic `gez` in place of the operator. The following are
 all equivalent and produce the same assembler instructions:
 ```
-if acc32 >=0 goto save_range
-if acc32 gez save_range
-if acc32 jgez goto save_range
+if r9 >=0 goto save_range
+if r9 gez save_range
+if r9 jgez goto save_range
 ```
+Of couse the choice of condition operators is limited to those directly supported by FXCore branch
+instructions, so the only allowed operators are:
+* <code>=0</code> The register is zero
+* <code><>0</code> or <code>!=0</code> The regsiter is not equal to zero
+* <code>>=0</code> The register is greater than or equal to zero
+* <code><=</code> The register is less than zero (e.g.negative)
+* <code>!=acc32.sign></code> The register does not have the same sign as ACC32
+  
+Note the operators are single glyphs (tokens) and must be space/tab separated from surrounding text. The following will not
+be understood by TOON and will cause an error to be flagged:
+```
+if r9>=0 goto label ; Need space between register and operator
+if r9 >= 0 goto label ; Operator must have no embedded spaces
+```
+(Future versions may relax some of these syntatic requirements).
 
-Using this familiar coding syntax makes it easy to spot key code branching points without lots of comments,
+Using this familiar IF statement coding syntax makes it easy to spot key code branching points without lots of comments,
 blank lines, or indentation to visually highlight the code flow.
 
-## 1:1 statement translation
+## Other Assembler Instructions
+At this time there are some FXCore instructions for which no TOON syntax has been defined. These instructions should
+be written as FXCore assembler statements:
+```
+apa
+apb
+apra
+aprb
+aprra
+aprrb
+apma
+apmb
+chr
+pitch
+set
+```
+A future version may define a TOON syntax for these instructions.
 
-The macro processor translates TOON to FXCore assembler statements one-for-one. Each TOON statement generates exactly
+## Code Generation
+
+The TOON processor translates TOON to FXCore assembler statements one-for-one. Each TOON statement generates exactly
 one assembler statement. The goal is to improve the development experience and ease-of-understanding for FXCore
 assembler code, not to actually implement a higher level language. Even within the confines of assembler
 and the FXCore instruction set, TOON provides a (subjectively) better experience for software development.
+
+If a TOON statement contains a comment using the line-comment delimiters `;` or `//` then the generated assembler
+output line will preserve that comment. This can aid in debugging the resulting assembler code. Likewise, if a
+TOON statement uses a `.rn` renamed (symbolic) value, the generated code will also use that symbol and not its
+resolved value.
+
+TOON will not attempt to process any text between block comment delimiters `/* ... */` on a single line or
+when such comments span multiple lines.
+
+By default TOON will include the oringal TOON statement text in generated assebler statements as an
+inline comment. This may be disabled with the `--noannotate` command line argument.
 
 ## Standalone execution
 
@@ -283,22 +398,27 @@ By default the TOON translator runs as the last step of the macro processor (e.g
 have been expanded). The TOON translator can also be run stand alone without the macro processor
 using the following command:
 ```
-java -jar fxcoremp.jar -cp com.cabintech.fxcoremp.Toon "input file name" "output file name"
+java -jar fxcoremp.jar -cp com.cabintech.fxcoremp.Toon "input file name" "output file name" --noannotate
 ```
+The `--noannotate` command line argument is optional. By default TOON will write the original TOON 
+statement as an inline `/* comment */` in the generated output. Specifing this option will disable generation of those comments.
 
-To run this in a tool chain and detect failures, the TOON translator will set a process exit code
-- 0 No errors, output file has been written
-- 1 Input files are not specified or not found
-- 2 Syntax error in the input file
-- 3 An unexpected failure
+To run this in a tool chain and detect failures, the TOON translator will set a process exit code as follows:
+- `0` No errors, output file has been written
+- `1` Input files are not specified or not found
+- `2` Syntax error in the input file
+- `3` An unexpected failure
 
 ## Tool chain
 
-The TOON translator must be run after all macro expansion has be done (otherwise it cannot reliably
-infer assignment statement source and targets types). If it is desired to use TOON syntax in
-FXCore assembler libraries, the TOON translator can be used after the FXCore preprocessor
-and before the assembler as an
-additional step in the tool chain.
+Generally the macro processor (and TOON) are run as the first step in the assembler tool
+chain, followed by the FXCore preprocessor (which expands FXCore library references). If
+TOON statements are used in FXCore libraries they would not be translated and the assembler
+would flag them as syntax errors. 
+
+If it is desired to use TOON syntax in
+FXCore assembler libraries, the TOON translator can be run a 2nd time in the chain (stand-alone) after the FXCore preprocessor
+and before the assembler as an additional step in the tool chain.
 
 ## Background
 
@@ -329,4 +449,4 @@ HLAs in their modern form are exhibited in [HLA v2](https://www.randallhyde.com/
 has goals very similar to this project. However 
 the abstractions and implementation are much too complex to implement in the FXCore instruction set. HLA is more oriented to
 general purpose computers than specialty processors like DSPs. For this project it seemed much simpler to
-expand the macro processor to recognize a more expressive (and yet still simple) syntax.
+expand the macro processor to recognize a more expressive (and yet still simple) syntax to achieve similar goals.
