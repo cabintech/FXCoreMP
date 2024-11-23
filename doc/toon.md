@@ -8,12 +8,12 @@ The TOON syntax can be freely mixed with regular FXCore assembler language synta
 can be used exclusively, sparsely, or not at all. The macro processor will translate all
 TOON statements into valid FXCore assembler.
 
-TOON processing is a separate operation on the source code than the macro processor.
+TOON processing is a separate operation on the source code.
 TOON syntax can be used with or without macros, and macros can be used with or without
 TOON statements. By default TOON translation is run as the last step of the macro
 processor, but it can also be run as a stand alone tool.
 
-We found that the re-formatting our existing FXCode into TOON statements has
+We found that re-formatting our existing FXCode into TOON statements has
 improved our ability to modify, maintain, and develop new code features with
 fewer errors and less
 time consulting the FXCore instruction set documentation. Data movement and code
@@ -50,7 +50,7 @@ more like a high level computer language and the operation and results can be fu
 understood without consulting the details of the <code>xor</code> machine instruction.
 <blockquote>
   The experienced FXCore programer will notice that the TOON statement appears to be
-  incorrect because it is using the <code>xor</code> instruction when the operand is an immediate (constant)
+  incorrect because it is using the <code>xor</code> instruction when the right-hand operand is an immediate (constant)
   value - the <code>xori</code> instruction would be expected. The TOON processor analyizes the
   operand types and infers the correct instruction. TOON will generate the <code>xori</code> instruction
   for the above assignment. See the [syntax reference] for other instructions that can
@@ -75,12 +75,13 @@ be easier to understand, a through understanding of FXCore instructions is still
 
 ## Readability of TOON statements
 
-TOON formated code can be (subjectively) easier to read and understand-at-a-glance. Assembler code
+TOON formated code can be (subjectively) easier to read and understand-at-a-glance. TOON seeks to make
+the semantics of assembler code expicit, clear, and intuitive for progammers. Traditional assembler code
 uses the same basic `opcode operand,operand` format for all statements no matter what they do. So
 there is no visual distinction between assignments, data operations, conditional branches, etc. In higher
-level languages those constructs have very different looking syntax. This helps with intuitive 
+level languages those constructs have very different syntax. This helps with intuitive 
 understanding of the code structure. Not having that syntactic visual aid makes assembler harder
-to read and understand.
+to read and understand. (For more on the concepts of 'high level assembler' see the [Backgound](#background) section).
 
 For example we often want to scan a block of code and know where (or if) a particular register is being modified.
 Scanning traditional assembler code requires careful reading to find where registers are
