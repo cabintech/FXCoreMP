@@ -1,4 +1,5 @@
 # FXCoreMP Macro Processor
+[Why another macro preprocessor?](../../../wiki/Why-FXCoreMP)
 This processor implements a macro-substitution language for the [FXCore DSP Assembler](https://www.experimentalnoize.com/product_FXCore.php) similar to
 how the C/C++ preprocessor adds macro capabilities to C and C++ language files. Before the development
 of this processor, an attempt was made to leverage the C preprocessor for this purpose. Shortcomings of that
