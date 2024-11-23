@@ -1,38 +1,39 @@
 # Target Of Operations Notation (TOON)
 
 The FXCoreMP macro processor enables an alternative assembler language syntax that is more
-expressive, simplifies common copy operations, and makes it easier to understand the 
+expressive, simplifies common operations, and makes it easier to understand the 
 sequence of operations and branching that makes up an FXCore program.
 
 The TOON syntax can be freely mixed with regular FXCore assembler language syntax, so it
 can be used exclusively, sparsely, or not at all. The macro processor will translate all
-TOON statements into valid FXCore assembler in it's output stream.
+TOON statements into valid FXCore assembler.
 
-Conceptually TOON is a separate operation on the source code than the macro processor.
-TOON syntax can be used with or without macro, and macros can be used with or without
+TOON processing is a separate operation on the source code than the macro processor.
+TOON syntax can be used with or without macros, and macros can be used with or without
 TOON statements. By default TOON translation is run as the last step of the macro
 processor, but it can also be run as a stand alone tool.
 
-We have found even the act of re-formatting our existing FXCode into TOON statements has
-improved our ability to modify, maintain, and develop new code features with less
+We found that the re-formatting our existing FXCode into TOON statements has
+improved our ability to modify, maintain, and develop new code features with
+fewer errors and less
 time consulting the FXCore instruction set documentation. Data movement and code
 branching become more apparent which makes the code easier to understand (especially when coming
 back to FXCore development after being away from it for a while).
 
 ## Target of an instruction
 
-One goal of TOON (and from which it derives its name) is to make the assembly language more explicit about the target of
+The original goal of TOON (and from which it derives its name) was to make the assembly language more explicit about the target of
 machine operations. Many FXCore instructions have implied side effects that are not
 evident in the assembler statement, in particular the target of the operation. For example:
 ```
-xor r8,0x0F
+xori r8,0x0F
 ```
 
 It might be assumed by a casual reader that after this operation the value of R8 would have been XOR'ed
 with 0x0F. But that is not the case, R8 remains unchanged and the result of the XOR is
 written to the accumulator (ACC32). This is not uncommon in machine architectures but the
-assembly language does not indicate the target of the operation. To know that, the user
-is either very familiar with the machine instructions, or they are constantly referencing
+assembly language does not indicate the target of the operation. To know that, the programmer
+must be either very familiar with the machine instructions, or constantly referencing
 the documentation to know what is the target of an operation, and sometimes the ordering
 of the operands.
 
@@ -43,12 +44,20 @@ acc32 = r8 xor 0x0F
 ```
 
 This makes it clear that the result of this operation is placed in (assigned to) the
-ACC32 register, and by placing the opcode between the operands the statement is in a
+ACC32 register, and by placing the opcode (mnemonic) between the operands the statement is in a
 more natural language form "R8 is XOR'ed with 0x0F and assigned to ACC32". This reads
 more like a high level computer language and the operation and results can be fully
-understood without consulting the details of the 'xor' machine instruction.
+understood without consulting the details of the <code>xor</code> machine instruction.
+<blockquote>
+  The experienced FXCore programer will notice that the TOON statement appears to be
+  incorrect because it is using the <code>xor</code> instruction when the operand is an immediate (constant)
+  value - the <code>xori</code> instruction would be expected. The TOON processor analyizes the
+  operand types and infers the correct instruction. TOON will generate the <code>xori</code> instruction
+  for the above assignment. See the [syntax reference] for other instructions that can
+  be inferred.
+</blockquote>
 
-The macro processor will validate that the target of assignment statements are valid
+The TOON processor will validate that the target of assignment statements are valid
 for the operation being performed. E.g. the XOR operation can only target the
 32-bit accumulator, so if anything other then "acc32" appears as the target of that
 instruction, an error will be flagged.
@@ -58,9 +67,118 @@ unnecessary to write "acc32 =" over and over in the source code. It does however
 allow many operations to be written in familiar programming assignment form and
 has many benefits for readability of the program source.
 
+Since its inception, TOON has expanded to improve the readability of many FXCore
+assembly instructions by recasting them into forms similar to high level
+languages. It should be noted that TOON is a 1:1 translator, each TOON statement
+is translated into exactly one FXCore assembly instruction. Although the syntax may
+be easier to understand, a through understanding of FXCore instructions is still required.
+
+## Readability of TOON statements
+
+TOON formated code can be (subjectively) easier to read and understand-at-a-glance. Assembler code
+uses the same basic `opcode operand,operand` format for all statements no matter what they do. So
+there is no visual distinction between assignments, data operations, conditional branches, etc. In higher
+level languages those constructs have very different looking syntax. This helps with intuitive 
+understanding of the code structure. Not having that syntactic visual aid makes assembler harder
+to read and understand.
+
+For example we often want to scan a block of code and know where (or if) a particular register is being modified.
+Scanning traditional assembler code requires careful reading to find where registers are
+being updated (explicitly in the list of operands, or implicitly by the definition of the instruction).
+
+Consider the following assembler code:
+
+```
+.rn temp  r0
+.rn temp1 r1
+.rn scaleFactorMin r2
+.rn scaleFactorMax r3
+.rn scaleFactorRange r4
+.equ delayLen 512
+.mem delaymem0 delayLen
+.mem delaymem1 delayLen
+
+1.  cpy_cs      acc32,in0
+2.  wrdel       delaymem0,acc32
+3.  cpy_cs      acc32,in1
+4.  wrdel       delaymem1,acc32
+5.  cpy_cs      temp,pot0_smth
+6.  wrdld       temp1,delayLen
+7.  multrr      temp,temp1
+8.  cpy_cc      scaleFactorMin,acc32
+9.  cpy_cs      temp,pot1_smth
+10. wrdld       temp1,delayLen
+11. multrr      temp,temp1
+12. cpy_cc      scaleFactorMax,acc32
+13. subs        scaleFactorMax,scaleFactorMin
+14. jgez        acc32,save_range
+15. cpy_cc      temp,scaleFactorMax
+16. cpy_cc      scaleFactorMax,scaleFactorMin
+17. cpy_cc      scaleFactorMin,temp
+18. abs	        acc32
+19. save_range:
+20. cpy_cc      scaleFactorRange,acc32
+```
+
+Where (or is) the register named `scaleFactorMax` modified by this code? 
+To answer that question some careful reading of the code is required. The symbol `scaleFactorMax` appears in several
+places, but do any of those update it's value? Even finding it in all the lists of operands takes some careful reading.
+
+That same block of code in TOON format:
+
+```
+.rn temp  r0
+.rn temp1 r1
+.rn scaleFactorMin r2
+.rn scaleFactorMax r3
+.rn scaleFactorRange r4
+.equ delayLen 512
+.mem delaymem0 delayLen
+.mem delaymem1 delayLen
+
+1.  acc32          = in0
+2.  (delaymem0)    = acc32
+3.  acc32          = in1
+4.  (delaymem1)    = acc32
+5.  temp           = pot0_smth 
+6.  temp1.u        = delayLen
+7.  acc32          = temp mult temp1
+8.  scaleFactorMin = acc32
+9.  temp           = pot1_smth
+10. temp1.u        = delayLen
+11. acc32          = temp mult temp1
+12. scaleFactorMax = acc32
+13. acc32          = scaleFactorMax subs scaleFactorMin
+14. if acc32 >=0 goto save_range
+15. temp           = scaleFactorMax
+16. scaleFactorMax = scaleFactorMin
+17. scaleFactorMin = temp 
+18. acc32          = abs acc32
+19. save_range: 
+20. scaleFactorRange = acc32
+```
+
+This is recognizable as a series of assignment and conditional branching statements. Just scan the left column and where you
+find `scaleFactorMax' you know that it is modified by that instruction (2 places are easy to find in the sample above).
+
+The example also show some other features of the TOON syntax. 
+* The assignment in line 1 is from an SFR (IN0) to a core
+register (ACC32). TOON determins that the assembler instruction `cpy_cs` is required and generates the approprate
+assembler statement.
+* In line 4, ACC32 is written to delay memory by an ''indirect'' constant address. Delay memory addressing is indicated by the parens.
+* In line 6, a 16 bit constant value is assigned to the upper part of register temp1. The ".U" postfix makes it clear what the
+assignment is doing.
+* The multiply on line 7 uses `MULT` which is not an FXCore instruction but is understood by
+TOON to implement a multiply operation on the 2 operands. TOON infers the proper FXCore instruction and generates
+the proper assembly instruction (`multrr` in this case because both operands are core registers). There are several
+such generic TOON operators to reduce the distracting detail in the code.
+* The conditional branch on line 14 is written as a familier "if" statement.
+
+Many of these features are described in the following sections.
+
 ## Assignment statements
 
-The backbone of all computer languages is data movement, or 'copy' instructions. The
+The backbone of all computer languages is data movement, or 'copy/load/store' instructions. The
 well understood syntax of using the '=' symbol to denote assignment is common in many
 languages. However in FXCore assembler (and most assembler languages), copy instructions
 adhere to the rigid `<opcode> <operand>,<operand>` format:
@@ -80,7 +198,7 @@ about the order of the operands (which has great significance for the copy instr
 versed in software development of any kind will immediately understand the target is on the left, and
 the source is on the right of the `=` symbol.
 
-The macro processor interprets the assignment statement and infers the correct instruction
+The TOON processor interprets the assignment statement and infers the correct instruction
 from the type of the source and destination operands.
 
 All the `cpy_XX` mnemonics can be replaced with TOON assignment statements even if the
@@ -92,78 +210,36 @@ $macro sampleWindow mr41
 delayTime = $sampleWindow
 ```
 
-The macro processor will infer the source and target types and generate the proper
-assembler statement using the `cpy_cm` instruction in this example.
-
-## Formatting and readability
-
-TOON formated code can be (subjectively) easier to read and understand-at-a-glance. Assembler code
-uses the same basic `opcode operand,operand` format for all statements no matter what they do. So
-there is no visual distinction between assignments, data operations, conditional branches, etc. In higher
-level languages those constructs have very different looking syntax. This helps with intuitive 
-understanding of the code structure. Not having that syntactic visual aid makes assembler harder
-to read and understand.
-
-For example we often want to scan a block of code and know where (or if) a particular register is being modified.
-Scanning traditional assembler code requires careful reading to find where registers are
-being updated (explicitly in the list of operands, or implicitly by the definition of the instruction).
-
-Consider the following assembler code:
-
+The TOON processor will generate the proper `cpy_cm` instruction in this example.
+### Delay Memory Assignments
+TOON provides special syntax for indirect copy operations to/from delay memory.
+Parens are used indicate indirect delay memory operations such as:
 ```
-cpy_cs      acc32,in0
-wrdel       delaymem0,acc32
-cpy_cs      acc32,in1
-wrdel       delaymem1,acc32
-cpy_cs      temp,pot0_smth
-wrdld       temp1,delayLen
-multrr      temp,temp1
-cpy_cc      scaleFactorMin,acc32
-cpy_cs      temp,pot1_smth
-wrdld       temp1,delayLen
-multrr      temp,temp1
-cpy_cc	    scaleFactorMax,acc32
-subs        scaleFactorMax,scaleFactorMin
-jgez        acc32,save_range
-cpy_cc	    temp,scaleFactorMax
-cpy_cc	    scaleFactorMax,scaleFactorMin
-cpy_cc      scaleFactorMin,temp
-abs	    acc32
-save_range:
-cpy_cc	    scaleFactorRange,acc32
+(r0) = acc32
 ```
+This assignment write the contents of the register ACC32 to the delay memory location
+contained in R0. E.g. R0 is an indirect reference to a delay memory location. TOON will
+generate a `wrdelx` instruction for this assigment.
 
-Where (or is) the register named `scaleFactorMax` modified by this code? 
-To answer that question some careful reading of the code is required. The symbol `scaleFactorMax` appears in several
-places, but do any of those update it's value? Even finding it in all the lists of operands takes some careful reading.
-
-That same block of code in TOON format:
-
+The FXCore also supports indirect reading (not writing) of memory registers. This is
+represented in TOON in a similar way, but using square brackets:
 ```
-acc32          = in0
-delaymem0      = wrdel acc32
-acc32          = in1
-delaymem1      = wrdel acc32
-temp           = pot0_smth 
-temp1          = wrdld delayLen
-acc32          = temp multrr temp1
-scaleFactorMin = acc32
-temp           = pot1_smth
-temp1          = wrdld delayLen
-acc32          = temp multrr temp1
-scaleFactorMax = acc32
-acc32          = scaleFactorMax subs scaleFactorMin
-if acc32 >=0 goto save_range
-temp           = scaleFactorMax
-scaleFactorMax = scaleFactorMin
-scaleFactorMin = temp 
-acc32          = abs acc32
-save_range: 
-scaleFactorRange = acc32
+r5 = [r1]
 ```
-
-This is recognizable as a series of assignment and conditional branching statements. Just scan the left column and where you
-find `scaleFactorMax' you know that it is modified by that instruction (2 places are easy to find in the sample above).
+This load the memory register addressed by the content of R1 into register R5.
+### 64/32 Bit Assignments
+FXCore also provides instructions for transferring 32 bit words between core
+registers and the upper and lower half of the 64 bit accumulator (ACC64). Rather than
+lookup those nmemonics, TOON assignment statements can generate the proper assembler code
+from easy to write code such as:
+```
+acc64.u = r5
+```
+The semantics are clear in the statement, the content of R5 is written to the upper
+half of ACC64. Likewise simple assignements transfer data the other way:
+```
+acc32 = acc64.l
+```
 
 ## Branching
 
