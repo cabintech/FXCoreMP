@@ -6,4 +6,4 @@ FXCore programs. These two functions (macro processor and TOON syntax) may be us
 
 See the documentation for a overview of this project, the macro language, installation instructions, example macros, and the TOON alternative assembler syntax.
 
-[Why another macro preprocessor?]([wiki/Why-FXCoreMP](../../../wiki/Why-FXCoreMP)
+[Why another macro preprocessor?](../../../wiki/Why-FXCoreMP)
