@@ -1,5 +1,8 @@
 /bin
 /build/bin
+/test/bin
+/test/Libraries
+
 
 # Compiled class file
 *.class

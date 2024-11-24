@@ -1,0 +1,201 @@
+; Test suite for TOON syntax. Each line tests some TOON syntax and has a comment
+; indicating what assembler instruction should be generated. 
+;
+; Validation is done by running this source file through the tool chain including
+; FXCoreMP, the assembler preprocessor, and the assembler. The assembler should flag
+; no errors. The output file of the macro processor (*.xfc-mp) should be examined to
+; manually validate that the correct instruction was generated for each TOON statement.
+;
+; (x) indirect addressing of delay memory with address counter (AGU)
+; @(x) absolute indirect addressing of delay memory (no address counter)
+; [x] indirect addressing of memory registers
+
+; Basic assignment
+r0 = r1		; cpy_cc (inferred)
+r0 = mr100	; cpy_cm (inferred)
+mr47=acc32	; cpy_mc (inferred)
+r0= switch	; cpy_cs (inferred)
+out1 = r5	; cpy_sc (inferred)
+r0 =flags	; cpy_cc (inferred)
+
+; Special assignment
+r0=[r5]     ; cpy_cmx  (inferred)
+r0.u = 2184 ; wrdld (inferred)
+
+; Acc64 assignments
+r5 = ACC64.U	; rdacc64u 
+r5 = ACC64.L	; rdacc64l
+r5 = ACC64.SAT	; sat64 
+ACC64.U = r5	; ldacc64u 
+ACC64.L = r5	; ldacc64l
+
+; Delay memory load and store
+r4 = (2487) ; rddel read r4 from abs mem addr
+(2487) = r4 ; wrdel
+
+r0 = (r5)   ; rddelx read DelayMem indirectly by R5
+(r5) = r0	; wrdelx
+
+r0 = @(r5)  ; rddirx read r0 from delaymem indirect and absolute
+@(r5) = r0	; wrdirx
+
+ACC32 = interp (r5+200) ; interp
+
+
+; Unary logic operations
+ACC32 = inv r0	; inv
+ACC32 = abs r0	; abs
+ACC32 = neg r0	; neg
+ACC32 = log2 r0	; log2
+ACC32 = exp2 r0	; exp2
+
+; 32 bit logic operations
+
+ACC32 = r0 or r1	; or
+ACC32 = r0 ori 0x7	; ori
+ACC32 = r0 or 0x7	; ori (inferred)
+
+ACC32 = r0 and r1	; and
+ACC32 = r0 andi 0x7	; andi
+ACC32 = r0 and 0x7	; andi (inferred)
+
+ACC32 = r0 xor r1	; xor
+ACC32 = r0 xori 0x7	; xori
+ACC32 = r0 xor 0x7	; xori (inferred)
+
+; shift left
+acc32 = r0 sl 1		; sl
+acc32 = r0 slr r1	; slr
+acc32 = r0 sl r1	; slr (inferred)
+
+acc32 = r0 sls 1	; sls
+acc32 = r0 slsr r1	; slsr
+acc32 = r0 sls r1	; slsr (inferred)
+
+; shift right
+acc32 = r0 sr 1		; sr
+acc32 = r0 srr r1	; srr
+acc32 = r0 sr r1	; srr (inferred)
+
+acc32 = r0 sra 1	; sra
+acc32 = r0 srar r1	; srar
+acc32 = r0 sra r1	; srar (inferred)
+
+; add
+acc32 = r0 add r1		; add
+acc32 = r0 addi 0x10 	; addi
+acc32 = r0 add 0x10 	; addi (inferred)
+
+; add signed
+acc32 = r0 adds r1		; adds
+acc32 = r0 addsi 0.2 	; addsi
+acc32 = r0 adds 0.2 	; addsi (inferred)
+
+; subtract
+acc32 = r0 sub r1		; sub
+acc32 = r0 subs r1		; subs
+
+; multiply
+acc32 = r0 multrr r1	; multrr
+acc32 = r0 multri 0.4	; multri
+acc32 = r0 mult r1		; multrr (inferred)
+acc32 = r0 mult 0.4		; multri (inferred)
+
+; 64 bit summing operations
+acc64 += r0 macrr r1		; macrr
+acc64 += r0 macri -0.2	; macri
+acc64 += r0 macr r1		; macrr (inferred)
+acc64 += r0 macr -0.2	; macri (inferred)
+
+acc64 += r0 macrd (181)	; macrd
+acc64 += 0.2 macid (1094); macid
+acc64 += r0 macd (181)	; macrd (inferred)
+acc64 += 0.2 macd (1094)	; macid (inferred)
+
+acc64 += r0 machrr r1	; machrr
+acc64 += r0 machri 0.25	; machri
+acc64 += r0 machr r1	; machrr (inferred)
+acc64 += r0 machr 0.25	; machri (inferred)
+
+acc64 += r0 machrd (100)	; machrd
+acc64 += 0.2 machid (100); machid
+acc64 += r0 machd (100)	; machrd (inferred)
+acc64 += 0.2 machd (100)	; machid (inferred)
+
+
+; Branching
+IF r0 >=0 GOTO target_label 	; jgez
+IF r0 <0 GOTO target_label 		; jneg
+IF r0 !=0 goto target_label		; jnz
+IF r0 <>0 goto target_label		; jnz
+if r0 =0 goto target_label		; jz
+if r0 !=acc32.sign target_label	; jzc
+
+IF r0 gez GOTO target_label 	; jgez
+IF r0 neg goto target_label		; jneg
+IF r0 nz goto target_label		; jnz
+if r0 z goto target_label		; jz
+
+GOTO target_label				; jmp
+jmp target_label				; jmp
+
+target_label:
+
+// Test syntax variations
+ACC32 = r7 and 5 + 2 		; andi (inferred) verify constant expression with extra tokens
+acc64 = r0 macrd (200)		; macrd not using += notation
+
+
+; All other instructions use FXCore assembler
+apa -0.1, 200
+apb 0.1, 0
+apra r0, 200
+aprb r0, 0
+aprra r0, r1
+aprrb r0, r1
+apma r0, mr10
+apmb r0, mr10
+chr lfo0|SIN, 200
+pitch rmp0|L4096, 4096
+set user0|15, r0
+
+; Validate use of assembler .rn directive
+.rn coeff r5
+.rn parm1 mr103
+.rn a acc32
+
+a = coeff		;# cpy_cc
+coeff = parm1	;# cpy_cm
+
+; Sample program
+.rn temp  r0
+.rn temp1 r1
+.rn scaleFactorMin r2
+.rn scaleFactorMax r3
+.rn scaleFactorRange r4
+.equ delayLen 512
+.mem delaymem0 delayLen
+.mem delaymem1 delayLen
+
+acc32          = in0
+(delaymem0)    = acc32
+acc32          = in1
+(delaymem1)    = acc32
+temp           = pot0_smth 
+temp1.u        = delayLen
+acc32          = temp mult temp1
+scaleFactorMin = acc32
+temp           = pot1_smth
+temp1.u        = delayLen
+acc32          = temp mult temp1
+scaleFactorMax = acc32
+acc32          = scaleFactorMax subs scaleFactorMin
+if acc32 >=0 goto save_range
+temp           = scaleFactorMax
+scaleFactorMax = scaleFactorMin
+scaleFactorMin = temp 
+acc32          = abs acc32
+save_range: 
+scaleFactorRange = acc32
+
+

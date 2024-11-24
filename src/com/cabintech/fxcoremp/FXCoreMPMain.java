@@ -71,6 +71,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -306,15 +307,56 @@ public class FXCoreMPMain {
 	}
 
 	public static void main(String[] args) {
+		
+		boolean doAnnotation = true;
+		
+		List<String> argsList = new ArrayList<>(Arrays.asList(args));
+		for (int i=0; i<argsList.size(); i++) {
+			String arg = argsList.get(i);
+			if (arg.equalsIgnoreCase("--noannotate")) {
+				doAnnotation = false;
+				argsList.remove(i);
+				continue;
+			}
+			if (arg.startsWith("-E")) { // Env variable for $if
+				String v = Util.jsSubstring(arg, 2);
+				if (v.length()==0) continue; // Skip empty -E arg
+				String vs[] = Util.split(v, "=");
+				if (vs.length != 2) {
+					System.err.println("Invalid -E cmd arg, expecting '-Ename=true|false'");
+					System.exit(1);
+				}
+				if (!vs[1].equals("true") && !vs[1].equals("false")) {
+					System.err.println("Invalid -E cmd arg, value must be true or false");
+					System.exit(1);
+				}
+				envMap.put(vs[0].toLowerCase(), vs[1]);
+				argsList.remove(i);
+				continue;
+			}
+			
+			if (arg.toLowerCase().startsWith("--debug")) { // Debug output level
+				String[] parts = Util.split(arg, "=");
+				if (parts.length < 2) {
+					verbose = "debug";
+				} else {
+					verbose = parts[1].toLowerCase();
+				}
+				argsList.remove(i);
+				continue;
+			}
+			
+		}
+
 
 		// First 2 args are required
-		if (args.length < 2) {
+		if (argsList.size() < 2) {
 			System.err.println("No input and output files specified");
 			System.exit(1);
 		}
 
-		srcFile= new File(args[0]);
-		outFile= new File(args[1]);
+		srcFile= new File(argsList.get(0));
+		outFile= new File(argsList.get(1));
 		
 		for (int i=2; i<args.length; i++) {
 			if (args[i].startsWith("-E")) { // Env variable for $if
@@ -346,7 +388,7 @@ public class FXCoreMPMain {
 		
 		// Process the input file one line at a time
 		
-		Toon tooner = new Toon(); // Create an instance of the TOON translator
+		Toon tooner = new Toon(doAnnotation); // Create an instance of the TOON translator
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
 			
 			// Pass 1, $include and $macro statements

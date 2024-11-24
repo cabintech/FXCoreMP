@@ -62,7 +62,7 @@ import java.util.TreeMap;
 public class Macro implements Constants {
 	
 	private String macroName = null;							// Macro name
-	private List<Arg> argNames = new ArrayList<>();				// List of argument name/direction
+	private List<MacroParm> argNames = new ArrayList<>();				// List of argument name/direction
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
 	private String sourceFile = null;
 	
@@ -125,7 +125,7 @@ public class Macro implements Constants {
 							dir = DIR_OUT;
 						}
 						//System.out.println("Macro defn: "+name+" direction "+dir);
-						argNames.add(new Arg(name.trim(), dir));
+						argNames.add(new MacroParm(name.trim(), dir));
 					}
 				}
 			}
@@ -169,7 +169,7 @@ public class Macro implements Constants {
 	 * Returns an unmodifiable list of argument names exactly as given on the $macro statement
 	 * @return
 	 */
-	public List<Arg> getArgNames() {
+	public List<MacroParm> getArgNames() {
 		return Collections.unmodifiableList(argNames); 
 	}
 
@@ -192,18 +192,18 @@ public class Macro implements Constants {
 	 * @param context
 	 * @return
 	 */
-	public List<String> eval(Map<String,Arg> argValues, Stmt context) throws Exception {
+	public List<String> eval(Map<String,MacroParm> argValues, Stmt context) throws Exception {
 		
 		// Use case-insensitive map for arg names
-		Map<String, Arg> treeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		Map<String, MacroParm> treeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		treeMap.putAll(argValues);
 
 		// All args must be supplied and match definition arg names
 		if (treeMap.size() != argNames.size()) {
 			throw new SyntaxException("Invocation of macro '"+macroName+"' has incorrect number of args.");
 		}
-		for (Arg argName: argNames) {
-			Arg argValue = treeMap.get(argName.getString()); 
+		for (MacroParm argName: argNames) {
+			MacroParm argValue = treeMap.get(argName.getString()); 
 			if (argValue == null) {
 				throw new SyntaxException("Invocation of macro '"+macroName+"' missing argument named '"+argName.getString()+"'.");
 			}
@@ -217,10 +217,10 @@ public class Macro implements Constants {
 		
 		// Add virtual args
 		lastUnique++; // Unique ID at the macro-invocation scope
-		treeMap.put(":unique", new Arg(lastUnique+"", DIR_ANY));
-		treeMap.put(":sourcefile", new Arg(sourceFile, DIR_ANY));
-		treeMap.put(":sourcefile:root", new Arg(FXCoreMPMain.srcFile.getName(), DIR_ANY));
-		treeMap.put(":outputfile", new Arg(FXCoreMPMain.outFile.getName(), DIR_ANY));
+		treeMap.put(":unique", new MacroParm(lastUnique+"", DIR_ANY));
+		treeMap.put(":sourcefile", new MacroParm(sourceFile, DIR_ANY));
+		treeMap.put(":sourcefile:root", new MacroParm(FXCoreMPMain.srcFile.getName(), DIR_ANY));
+		treeMap.put(":outputfile", new MacroParm(FXCoreMPMain.outFile.getName(), DIR_ANY));
 		
 		// Do argument substitution on each line of the macro defn
 		List<Stmt> genCode = new ArrayList<Stmt>();
@@ -246,12 +246,12 @@ public class Macro implements Constants {
 	 * @return
 	 * @throws Exception
 	 */
-	private String doArgSubst(String text, Map<String,Arg> argMap) throws Exception {
+	private String doArgSubst(String text, Map<String,MacroParm> argMap) throws Exception {
 		
 		// Crude, but since there are only a few args this is ok.
 		//TODO: Does not handle whitespace like "${ myargname }"
 		//TODO: This is case sensitive
-		for (Arg argName: argNames) {
+		for (MacroParm argName: argNames) {
 			String name = argName.getString();
 			text = text.replace("${"+name+"}", argMap.get(name).getString());
 		}
@@ -408,7 +408,7 @@ public class Macro implements Constants {
 	/**
 	 * Given a macro name and list of argument specifications, return the evaluation of the
 	 * named macro with the given arg values. The arg values must be simple comma delimited literal text with no embedded
-	 * substitutions. Arg specs can be named arguments 'argname1=value1, argname2=value2' or positional 'value1, value2'.
+	 * substitutions. MacroParm specs can be named arguments 'argname1=value1, argname2=value2' or positional 'value1, value2'.
 	 * 
 	 * @param evalText
 	 * @return
@@ -428,7 +428,7 @@ public class Macro implements Constants {
 		}
 
 		// Build map of arg names to values
-		Map<String,Arg> argNameValueMap = new HashMap<>();
+		Map<String,MacroParm> argNameValueMap = new HashMap<>();
 
 		int numPosArgs = 0;
 		int numNamArgs = 0;
@@ -439,7 +439,7 @@ public class Macro implements Constants {
 				// No equal signs in the arg, so assume positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
 				if (numNamArgs > 0) throw new SyntaxException("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed. Line "+stmt.getLineNum()+" in "+stmt.getFileName());
 				String argName = m.getArgNames().get(argNum).getString();		// Name from macro definition
-				argNameValueMap.put(argName, new Arg(argText.trim(), DIR_ANY));	// Value is the argument text, positional args are always DIR_ANY
+				argNameValueMap.put(argName, new MacroParm(argText.trim(), DIR_ANY));	// Value is the argument text, positional args are always DIR_ANY
 			}
 			else {
 				// Named argument of the form 'argname=argvalue'.
@@ -469,7 +469,7 @@ public class Macro implements Constants {
 				String argValue= namevalue[1].trim(); // Value is right of equal
 				
 				//System.out.println(argName + " is direction " + dir);
-				argNameValueMap.put(argName, new Arg(argValue, dir));
+				argNameValueMap.put(argName, new MacroParm(argValue, dir));
 			}
 		}
 
