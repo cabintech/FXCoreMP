@@ -1,6 +1,9 @@
 package com.cabintech.fxcoremp;
 
 /**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
  * Represents a macro definition create with the $macro statement.
  * 
  * Syntax 1 (simple): $macro macro-name substitution-text
@@ -58,6 +61,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import com.cabintech.toon.SyntaxException;
+import com.cabintech.utils.Util;
 
 public class Macro implements Constants {
 	

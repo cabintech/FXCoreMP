@@ -1,5 +1,10 @@
 package com.cabintech.fxcoremp;
 
+/**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ */
+
 import java.util.Stack;
 
 public class SourceContext {

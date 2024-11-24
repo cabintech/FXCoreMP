@@ -1,5 +1,14 @@
-package com.cabintech.fxcoremp;
+package com.cabintech.toon;
 
+/**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
+ * This class represents a TOON language syntax error. It has no features beyond that of
+ * the Exception class. The TOON processor with throw this type when it detects a syntax
+ * error.
+ *
+ */
 public class SyntaxException extends Exception {
 
 	private static final long serialVersionUID = 1L;

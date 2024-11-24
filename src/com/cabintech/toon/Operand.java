@@ -1,11 +1,15 @@
-package com.cabintech.fxcoremp;
+package com.cabintech.toon;
 
 import java.util.Map;
 
+import com.cabintech.utils.Util;
+
 /**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
  * This object represents a TOON statement operand. It may be the left or right side
  * of an assignment, or either side of an expression. 
- * @author Mark
  *
  */
 public class Operand {

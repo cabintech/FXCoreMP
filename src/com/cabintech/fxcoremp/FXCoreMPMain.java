@@ -1,7 +1,13 @@
 package com.cabintech.fxcoremp;
 
 /**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
  * FXCore DSP assembler language macro processor.
+ * 
+ * Note some of this may be out of date, see the current project documentation at:
+ * https://github.com/cabintech/FXCoreMP/wiki
  * 
  * This processor implements a macro-substitution language for the FXCore DSP assembler similar to
  * how the C/C++ preprocessor adds macro capabilities to C and C++ language files. Before the development
@@ -77,6 +83,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import com.cabintech.toon.SyntaxException;
+import com.cabintech.toon.Toon;
+import com.cabintech.utils.SafeMap;
+import com.cabintech.utils.Util;
 
 /**
  * Pre-process FXCore source code before running it through the CPP (C preprocessor).

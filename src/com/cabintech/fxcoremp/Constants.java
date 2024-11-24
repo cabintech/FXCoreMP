@@ -1,5 +1,12 @@
 package com.cabintech.fxcoremp;
 
+/**
+ * Common constants for the FXCoreMP project code.
+ * @author Mark McMillan
+ * 
+ * Copyright (c) Cabintech Global LLC
+ */
+
 //v1.1 - Added optional 'direction' indicators on macro arguments
 //       Added optional TOON statement syntax (Target Of Operation Notation)
 

@@ -1,4 +1,11 @@
-package com.cabintech.fxcoremp;
+package com.cabintech.utils;
+
+/**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ */
+
+import com.cabintech.fxcoremp.FXCoreMPMain;
 
 public class Util {
 

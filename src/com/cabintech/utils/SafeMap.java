@@ -1,4 +1,4 @@
-package com.cabintech.fxcoremp;
+package com.cabintech.utils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
  * Wrapper for a Map<String,Object> which provides safe ways to get
  * strings, lists, and submaps from the Map. The getXXX methods will
  * never return null, but will return empty strings, lists, or maps

@@ -1,4 +1,4 @@
-package com.cabintech.fxcoremp;
+package com.cabintech.toon;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -12,7 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.cabintech.fxcoremp.Stmt;
+import com.cabintech.utils.Util;
+
 /**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
  * This class translates TOON source statements into FXCore assembly statements. The main() of this
  * class can be used to read a source file and output a file with translated source (e.g. it does
  * the TOON translations separate from the macro processing functions).

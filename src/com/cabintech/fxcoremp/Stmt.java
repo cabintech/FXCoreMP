@@ -1,5 +1,16 @@
 package com.cabintech.fxcoremp;
 
+/**
+ * @author Mark McMillan
+ * Copyright (c) Cabintech Global LLC
+ * 
+ * This class represents a single assembler (or TOON) statement. Upon construction a line of text
+ * is parsed and comments are separated out. The getText() method returns just the non-comment
+ * parts of the input source line.
+ */
+
+import com.cabintech.utils.Util;
+
 public class Stmt {
 
 	private String fullText = null;
