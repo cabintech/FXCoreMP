@@ -396,9 +396,10 @@ public class FXCoreMPMain {
 		sourceDir = srcFile.getParentFile();
 		
 		List<Stmt> newSource = new ArrayList<>();
+		int syntaxErrors = 0; // Toon syntax errors
+		int lineCnt = 0;
 		
 		// Process the input file one line at a time
-		
 		Toon tooner = new Toon(doAnnotation); // Create an instance of the TOON translator
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
 			
@@ -409,31 +410,45 @@ public class FXCoreMPMain {
 			// Now expand all macro invocations in the source code
 			List<String> outSource = Macro.doMacroEval(newSource);
 			
+			
 			for (String s: outSource) {
+				lineCnt++;
 				// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain
-				s = tooner.reTOON(s);
+				try {
+					s = tooner.reTOON(s);
+				}
+				catch (SyntaxException se) {
+					syntaxErrors++;
+					System.out.println("Error on line "+lineCnt+" '"+s+"'");
+					System.out.println("  "+se.getMessage());
+					// Continue processing the next line
+				}
 				writer.write(s);
 				writer.newLine();
 			};
+			
 			
 			Util.info("PreCPP Completed");
 			Util.info("  Included files:     "+includedFiles.size());
 			Util.info("  Macro definitions:  "+macroMap.size());
 			Util.info("  Output lines:       "+newSource.size()+" ("+outFile.getAbsolutePath()+")");
+			Util.info("  TOON syntax errors: "+syntaxErrors);
+			
+
 			
 		}
 		catch (Throwable t) {
-			if (t instanceof SyntaxException) {
-				// Just output the error message, no stack trace
-				System.out.println(t.getMessage());
-			}
-			else {
-				// Anything else is unexpected
-				System.out.println("Unexpected program error:");
-				t.printStackTrace(System.out);
-			}
-			System.exit(1);
+			// Unexpected
+			System.out.println("Unexpected program error:");
+			t.printStackTrace(System.out);
+			System.exit(3);
 		}
+		
+		if (syntaxErrors > 0) {
+			System.exit(2);
+		}
+		
+		System.exit(0);
 	}
 
 }
