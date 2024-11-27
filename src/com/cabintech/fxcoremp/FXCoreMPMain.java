@@ -124,7 +124,6 @@ public class FXCoreMPMain {
 	 * @throws Throwable
 	 */
 	private static void processFilePass1(File inFile, List<Stmt> writer, List<String> includedFiles) throws Throwable {
-		Util.info("PreCPP: Processing pass 1 on file "+inFile.getName());
 		
 		if (!inFile.exists()) {
 			throw new IOException("Input file '"+inFile.getAbsolutePath()+"' not found.");
