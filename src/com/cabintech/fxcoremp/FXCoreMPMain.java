@@ -317,16 +317,38 @@ public class FXCoreMPMain {
 
 	public static void main(String[] args) {
 		
-		boolean doAnnotation = true;
+		boolean doAnnotation = false;
+		boolean doToon = true;
+		boolean doMacro = true;
+		boolean toonModeNormal = true;
 		
 		List<String> argsList = new ArrayList<>(Arrays.asList(args));
 		for (int i=0; i<argsList.size(); i++) {
 			String arg = argsList.get(i);
-			if (arg.equalsIgnoreCase("--noannotate")) {
+			if (arg.equalsIgnoreCase("--annotate")) {
 				doAnnotation = false;
 				argsList.remove(i--);
 				continue;
 			}
+			
+			if (arg.equalsIgnoreCase("--notoon")) { // Run TOON processor
+				doToon = false;
+				argsList.remove(i--);
+				continue;
+			}
+			
+			if (arg.equalsIgnoreCase("--nomacro")) { // Run MACRO processor
+				doMacro = false;
+				argsList.remove(i--);
+				continue;
+			}
+			
+			if (arg.equalsIgnoreCase("--reversetoon")) { // Run asm2toon (no macros)
+				toonModeNormal = false;
+				argsList.remove(i--);
+				continue;
+			}
+			
 			if (arg.startsWith("-E")) { // Env variable for $if
 				String v = Util.jsSubstring(arg, 2);
 				if (v.length()==0) continue; // Skip empty -E arg
@@ -368,29 +390,15 @@ public class FXCoreMPMain {
 			System.err.println("No input and output files specified");
 			System.exit(1);
 		}
+		
+		// Cannot run TOON in reverse and macro
+		if (doMacro && doToon && !toonModeNormal) {
+			System.err.println("Cannot run macros and reverse TOON.");
+			System.exit(1);
+		}
 
 		srcFile= new File(argsList.get(0));
 		outFile= new File(argsList.get(1));
-		
-		for (int i=2; i<args.length; i++) {
-			if (args[i].startsWith("-E")) { // Env variable for $if
-				String v = Util.jsSubstring(args[i], 2);
-				if (v.length()==0) continue; // Skip empty -E arg
-				String vs[] = Util.split(v, "=");
-				if (vs.length != 2) {
-					System.err.println("Invalid -E cmd arg, expecting '-Ename=true|false'");
-					System.exit(1);
-				}
-				if (!vs[1].equals("true") && !vs[1].equals("false")) {
-					System.err.println("Invalid -E cmd arg, value must be true or false");
-					System.exit(1);
-				}
-				envMap.put(vs[0].toLowerCase(), vs[1]);
-			}
-			else if (args[i].startsWith("-D")) { // Debug output level
-				verbose = Util.jsSubstring(args[i], 2);
-			}
-		}
 		
 		if (!srcFile.exists()) {
 			System.out.println("Input file '"+srcFile.getAbsolutePath()+"' not found.");
@@ -400,43 +408,81 @@ public class FXCoreMPMain {
 		
 		List<Stmt> newSource = new ArrayList<>();
 		int syntaxErrors = 0; // Toon syntax errors
-		int lineCnt = 0;
 		
-		// Process the input file one line at a time
 		Toon tooner = new Toon(doAnnotation); // Create an instance of the TOON translator
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
+		
+		try { // Catch any unexpected errors
+		
+			//---------------------------------------------------------------
+			// Macro processing
+			//---------------------------------------------------------------
 			
-			// Pass 1, $include and $macro statements
+			List<String> outSource = null;
 			List<String> includedFiles = new ArrayList<>();
-			processFilePass1(srcFile, newSource, includedFiles);
-			
-			// Now expand all macro invocations in the source code
-			List<String> outSource = Macro.doMacroEval(newSource);
-			
-			
-			for (String s: outSource) {
-				lineCnt++;
-				// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain. We
-				// only xlate TOON-->Asm when doing macro expansion (never Asm-->TOON).
-				try {
-					s = tooner.toonToAsm(s);
+			try {
+				if (doMacro) {
+					// Pass 1, $include and $macro statements
+					processFilePass1(srcFile, newSource, includedFiles);
+					
+					// Pass 2, now expand all macro invocations in the source code
+					outSource = Macro.doMacroEval(newSource);
 				}
-				catch (SyntaxException se) {
-					syntaxErrors++;
-					System.out.println("Error on line "+lineCnt+" '"+s+"'");
-					System.out.println("  "+se.getMessage());
-					// Continue processing the next line
+				else {
+					// No macro step, read raw source for next operation
+					outSource = Files.readAllLines(srcFile.toPath());
 				}
-				writer.write(s);
-				writer.newLine();
-			};
+			}
+			catch (SyntaxException se) {
+				// Macro processing halts on first error
+				syntaxErrors++;
+				System.out.println("Macro processing error:");
+				System.out.println("  "+se.getMessage());
+				doToon = false; // Force skip of TOON processing
+			}
+				
+			//---------------------------------------------------------------
+			// TOON processing
+			//---------------------------------------------------------------
+			
+			if (doToon) {
+				int lineCnt = 0;
+				List<String> toonOutput = new ArrayList<>();
+				for (String s: outSource) {
+					lineCnt++;
+					// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain. We
+					// only xlate TOON-->Asm when doing macro expansion (never Asm-->TOON).
+					try {
+						if (toonModeNormal) {
+							s = tooner.toonToAsm(s);
+						} else {
+							s = tooner.asmToToon(s);
+						}
+					}
+					catch (SyntaxException se) {
+						syntaxErrors++;
+						System.out.println("TOON error on line "+lineCnt+" '"+s+"'");
+						System.out.println("  "+se.getMessage());
+						// Continue processing the next line
+					}
+					toonOutput.add(s);
+				};
+				outSource = toonOutput; // Replace with the TOON results
+			}
+			
+			// Write final results to output file
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
+				for (String out : outSource) {
+					writer.write(out);
+					writer.newLine();
+				}
+			}
 			
 			
-			Util.info("Macro Processor Completed");
+			Util.info("FXCoreMP processing completed ("+(doMacro?"macros":"no macros")+", "+(doToon?"toon":"no toon")+(toonModeNormal?" [TOON-->ASM]":" [ASM-->TOON]")+")");
+			Util.info("  Errors:             "+syntaxErrors);
 			Util.info("  Included files:     "+includedFiles.size());
 			Util.info("  Macro definitions:  "+macroMap.size());
-			Util.info("  Output lines:       "+newSource.size()+" ("+outFile.getAbsolutePath()+")");
-			Util.info("  TOON syntax errors: "+syntaxErrors);
+			Util.info("  Output lines:       "+outSource.size()+" ("+outFile.getAbsolutePath()+")");
 			
 		}
 		catch (Throwable t) {

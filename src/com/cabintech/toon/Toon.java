@@ -1,12 +1,6 @@
 package com.cabintech.toon;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -965,91 +959,4 @@ public class Toon {
 		this.annotate = annotate;
 	}
 	
-	public static void main(String[] args) {
-		int lineCnt = 0;
-		String readLine = null;
-		boolean doAnnotation = true;
-		boolean doUnTune = false;
-		
-		List<String> argsList = new ArrayList<>(Arrays.asList(args));
-		for (int i=0; i<argsList.size(); i++) {
-			String arg = argsList.get(i);
-			if (arg.equalsIgnoreCase("--noannotate")) {
-				doAnnotation = false;
-				argsList.remove(i--);
-				continue;
-			}
-			if (arg.equalsIgnoreCase("--untoon")) {
-				doUnTune = true;
-				argsList.remove(i--);
-				continue;
-			}
-			if (arg.trim().length()==0) { // Batch files can pass empty args
-				argsList.remove(i--);
-				continue;
-			}
-		}
-		
-		
-		try {
-			if (argsList.size() != 2) {
-				System.out.println("Expected 2 file name arguments <inputfile> <outputfile>");
-				System.exit(1);
-			}
-			
-			File srcFile= new File(argsList.get(0));
-			File outFile= new File(argsList.get(1));
-			
-			if (!srcFile.exists()) {
-				System.out.println("Input file '"+srcFile.getAbsolutePath()+"' not found.");
-				System.exit(1);
-			}
-			
-			Toon tooner = new Toon(doAnnotation);
-			int errorCnt = 0;
-			
-			try (BufferedReader reader = Files.newBufferedReader(srcFile.toPath()); 
-				BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
-				
-				readLine = reader.readLine();
-				while (readLine != null) {
-					lineCnt++;
-					// Read source, translate, and write to output file
-					try {
-						if (doUnTune) {
-							// Assembler --> TOON
-							writer.write(tooner.asmToToon(readLine));
-						}
-						else {
-							// TOON --> Assembler
-							writer.write(tooner.toonToAsm(readLine));
-						}
-						writer.newLine();
-					}
-					catch (SyntaxException se) {
-						errorCnt++;
-						System.out.println("Error on line "+lineCnt+" '"+readLine+"'");
-						System.out.println("  "+se.getMessage());
-					}
-					readLine = reader.readLine();
-				}
-			}
-			
-			System.out.println("TOON processing "+(doUnTune?"ASM-->TOON":"TOON-->ASM")+" completed with "+errorCnt+" errors, "+lineCnt+" lines written.");
-			System.out.println("  Input file  : "+srcFile.getAbsolutePath());
-			System.out.println("  Output file : "+outFile.getAbsolutePath());
-			System.exit(errorCnt==0?0:2); // Exit code 2 = syntax errors occurred
-			
-		}
-		catch (Throwable t) {
-			System.out.println("Unexpected exception processing line "+lineCnt+" '"+(readLine==null?"":readLine)+"'");
-			t.printStackTrace(System.out);
-			System.exit(3); // Exit code 3 = code failure
-		}
-		
-		// Should never get here
-		System.out.println("Unexpected control flow in main.");
-		System.exit(3);
-	}
-
 }
