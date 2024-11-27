@@ -317,6 +317,9 @@ public class FXCoreMPMain {
 
 	public static void main(String[] args) {
 		
+		System.out.println("at start");
+		for (String a:args) System.out.println("'"+a+"'");
+		
 		boolean doAnnotation = true;
 		
 		List<String> argsList = new ArrayList<>(Arrays.asList(args));
@@ -355,7 +358,15 @@ public class FXCoreMPMain {
 				continue;
 			}
 			
+			if (arg.trim().length()==0) {
+				argsList.remove(i--);
+				continue;
+			}
+			
 		}
+
+		System.out.println("after parms");
+		for (String a:args) System.out.println("'"+a+"'");
 
 
 		// First 2 args are required

@@ -973,13 +973,18 @@ public class Toon {
 		
 		List<String> argsList = new ArrayList<>(Arrays.asList(args));
 		for (int i=0; i<argsList.size(); i++) {
-			if (argsList.get(i).equalsIgnoreCase("--noannotate")) {
+			String arg = argsList.get(i);
+			if (arg.equalsIgnoreCase("--noannotate")) {
 				doAnnotation = false;
 				argsList.remove(i--);
 				continue;
 			}
-			if (argsList.get(i).equalsIgnoreCase("--untoon")) {
+			if (arg.equalsIgnoreCase("--untoon")) {
 				doUnTune = true;
+				argsList.remove(i--);
+				continue;
+			}
+			if (arg.trim().length()==0) { // Batch files can pass empty args
 				argsList.remove(i--);
 				continue;
 			}
