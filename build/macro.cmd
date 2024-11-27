@@ -11,4 +11,4 @@ rem echo 1=%1
 rem echo 2=%2
 rem echo mypath=%mypath%
 
-java -jar FXCoreMP.jar "%1" "%2" --noannotate --debug=info
+java -jar FXCoreMP.jar "%1" "%2" --debug=info

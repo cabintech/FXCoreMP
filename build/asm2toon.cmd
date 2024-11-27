@@ -11,4 +11,4 @@ rem echo 1=%1
 rem echo 2=%2
 rem echo mypath=%mypath%
 
-java -cp FXCoreMP.jar com.cabintech.toon.Toon "%1" "%2" --untoon --noannotate
+java -jar FXCoreMP.jar "%1" "%2" --nomacro --reversetoon --debug=info
