@@ -46,6 +46,91 @@ import com.cabintech.utils.Util;
 
 public class Toon {
 	
+	/**
+	 * All ASM opcodes that translate to a simple TOON assignment stmt
+	 */
+	private Set<String> ToonableCopySet = Set.of(
+			"cpy_cm",
+			"cpy_mc",
+			"cpy_cs",
+			"cpy_sc",
+			"cpy_cc",
+			"cpy_cmx",
+			"wrdld",
+			"rdacc64u",
+			"rdacc64l",
+			"sat64",
+			"ldacc64u",
+			"ldacc64l",
+			"rddel",
+			"wrdel",
+			"rddelx",
+			"wrdelx",
+			"rddirx",
+			"wrdirx",
+			"interp"
+	);
+	
+	/**
+	 * Operations with 2 operands
+	 */
+	private Set<String> ToonableOpsSet = Set.of(
+			"addi",
+			"add",		
+			"adds",		
+			"addsi",
+			"sub",
+			"subs",
+			"sl",		
+			"slr",
+			"sls",
+			"slsr",
+			"sr",		
+			"srr",
+			"sra",
+			"srar",
+			"or",		
+			"ori",
+			"and",		
+			"andi",
+			"xor",		
+			"xori",
+			
+			"multrr",
+			"multri",
+
+			"macrr",
+			"macri",
+			"macrd",
+			"macid",
+			"machrr",
+			"machri",
+			"machrd",
+			"machid"
+			
+	);
+	
+	// Conditional branching
+	private Set<String> ToonableBranchSet = Set.of(
+			"jgez", 
+			"jneg",
+			"jnz",
+			"jz",
+			"jzc",
+			"jmp"
+	);
+
+	// Operations with 1 operand
+	private Set<String> ToonableUnarySet = Set.of(
+			"inv",
+			"abs",
+			"neg",
+			"log2",
+			"exp2"
+			);
+
+	
+	
 	// 2 operand instructions that target ACC32 'acc32 = x instr y'
 	private Set<String> Ops2ArgAcc32Set = Set.of(
 			"addi",
@@ -182,49 +267,96 @@ public class Toon {
 	
 	private boolean annotate = true; // Write original TOON statements as comments in each line of output. 
 	
+	private static String SEP1 = "\t\t";   // Separator between output instruction and first operand
+	private static String SEP2 = "\t\t\t"; // Separator between output statement text and comment
+	private static String SEP3 = "\t\t"; // Separator before '=' in generated TOON statements (asmToToon)
+	
+//	/**
+//	 * Return a concatenation of all the elements of 'tokens' starting
+//	 * at fromIndex, followed by any comment string from the stmt. This is
+//	 * used to insure that the re-generated statement includes everything
+//	 * following the TOON blank-delimited tokens. E.g. TOON stmt:
+//	 * 
+//	 * acc32 = r0 addi 31 + 4 ; my comment
+//	 * 
+//	 * This will parse as 7 tokens, but the base code will output:
+//	 * 
+//	 * addi r0,31
+//	 * 
+//	 * so this is used to append the remainder to make:
+//	 * 
+//	 * addi r0,31 + 4 ; my comment
+//	 * 
+//	 * @param tokens
+//	 * @param fromIndex
+//	 * @param stmt
+//	 * @return
+//	 */
+//	private String joinRemainder(String[] tokens, int fromIndex, Stmt stmt) {
+//		StringBuffer s = new StringBuffer();
+//		for (int i=fromIndex; i < tokens.length; i++) {
+//			s.append(" " + tokens[i]);
+//		}
+//		s.append(SEP);
+//		
+//		// Insert original stmt text as a comment for debugging */
+//		if (annotate) {
+//			s.append(" /* ");
+//			s.append(stmt.getText());
+//			s.append(" */");
+//		}
+//		
+//		// Add original comment, if any
+//		if (stmt.getComment().length() > 0) {
+//			s.append(SEP+stmt.getComment());
+//		}
+//		return s.toString();
+//	}
+	
 	/**
-	 * Return a concatenation of all the elements of 'tokens' starting
-	 * at fromIndex, followed by any comment string from the stmt. This is
-	 * used to insure that the re-generated statement includes everything
-	 * following the TOON blank-delimited tokens. E.g. TOON stmt:
+	 * Build statement into from all required parts. The label and comments will be taken from the
+	 * given Stmt object. Between them will be all the (vararg) parts and all remainder tokens (blanks between)
 	 * 
-	 * acc32 = r0 addi 31 + 4 ; my comment
+	 * stmt.getLabel(): parts[0]+parts[1]+...+tokens[remainder1]+tokens[remainder+1]...+stmt.getComment()
 	 * 
-	 * This will parse as 7 tokens, but the base code will output:
-	 * 
-	 * addi r0,31
-	 * 
-	 * so this is used to append the remainder to make:
-	 * 
-	 * addi r0,31 + 4 ; my comment
+	 * 'tokens' may be null
 	 * 
 	 * @param tokens
-	 * @param fromIndex
+	 * @param remainderIndex
 	 * @param stmt
 	 * @return
 	 */
-	private String joinRemainder(String[] tokens, int fromIndex, Stmt stmt) {
+	private String rebuildStatement(String stmtText, Stmt stmt, String[] tokens, int remainderIndex) {
 		StringBuffer s = new StringBuffer();
-		for (int i=fromIndex; i < tokens.length; i++) {
-			s.append(" " + tokens[i]);
+		s.append(stmt.getLabel()); // Start with label, if any (includes ': ' separator)
+		
+		// Add generated part of the statement
+		s.append(stmtText);
+		
+		// Add additional tokens starting at remainderIndex. These are left over from the original
+		// statement text when it was white-space tokenized and these trailing tokens need to be
+		// restored, e.g. "acc32 = r1 xor 8 + 2". The extra tokens would be "+" and "2"
+		if (tokens != null) {
+			for (int i=remainderIndex; i < tokens.length; i++) {
+				s.append(" " + tokens[i]);
+			}
+			s.append(SEP2);
 		}
-		s.append(SEP);
 		
 		// Insert original stmt text as a comment for debugging */
 		if (annotate) {
 			s.append(" /* ");
 			s.append(stmt.getText());
-			s.append(" */");
+			s.append(" */ ");
 		}
 		
 		// Add original comment, if any
 		if (stmt.getComment().length() > 0) {
-			s.append(SEP+stmt.getComment());
+			s.append(SEP1 + stmt.getComment());
 		}
+		
 		return s.toString();
 	}
-	
-	private static String SEP = "\t\t"; // Separator between output tokens
 	
 	private static String[] insertElement(String[] a, int index, String newS) {
 		if (index >= a.length) throw new IllegalArgumentException("Index value "+index+" is larger the array max index "+a.length);
@@ -251,13 +383,15 @@ public class Toon {
 	 * @return
 	 * @throws Exception
 	 */
-	public String reTOON(String s) throws Exception {
+	public String toonToAsm(String s) throws Exception {
 		
-		Stmt stmt = new Stmt(s, 0, ""); // Use this to remove comments (TODO: redundant with earlier macro processing...)
+		Stmt stmt = new Stmt(s, 0, ""); // Remove comments and labels
 		
 		//TODO: Make a custom splitter to better handle operators adjacent to operands
 		// acc66+=r0 macrr r1
 		// if r0>=0 goto label
+		
+		//TODO: Handle multiline block comments (see macro processor)
 		
 		String[] tokenList = Util.split(stmt.getText(), "\\p{Space}+"); // Tokenize on white space including tabs
 		int tokenCnt = tokenList.length;
@@ -310,7 +444,7 @@ public class Toon {
 			return s; // Nothing else to do with this statement, leave it unmodified
 		}
 		
-		if (tokenCnt < 2) return s; // All TOON statements have > 2 tokens
+		if (tokenCnt < 2) return s; // All TOON statements have > 2 tokens, return anything else unmodified
 		
 		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.
 		if (tokenList[0].equalsIgnoreCase("if")) {
@@ -331,12 +465,12 @@ public class Toon {
 			}
 			
 			// Generate FXCore assembler format (use original symbol, if any, for the register) for readability of the generated code
-			return cond+SEP+tokenList[1]+","+tokenList[labelIndex]+joinRemainder(tokenList, labelIndex+1, stmt);
+			return rebuildStatement(cond + SEP1 + tokenList[1] + "," + tokenList[labelIndex], stmt, tokenList, labelIndex+1);
 		}
 		
 		// Unconditional branch
 		if (tokenList[0].toUpperCase().equals("JMP") || tokenList[0].toUpperCase().equals("GOTO")) {
-			return "jmp"+SEP+tokenList[1]+joinRemainder(tokenList, 2, stmt);
+			return rebuildStatement("jmp" + SEP1 + tokenList[1], stmt, tokenList, 2);
 		}
 		
 		// Assignment style TOON statements 'x = ..."
@@ -359,14 +493,14 @@ public class Toon {
 				if (!right.isCR()) throw new SyntaxException("Right side of ACC64 assignment must be a CR in '"+s+"'");
 				char UL = left.isModLower() ? 'l' : (left.isModUpper() ? 'u' : '?');
 				if (UL=='?') throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) postfix in '"+s+"'");
-				return "ldacc64"+UL+SEP+right.getOpText() + joinRemainder(tokenList, 3, stmt);
+				return rebuildStatement("ldacc64" + UL + SEP1 + right.getOpText(), stmt, tokenList, 3);
 			}
 			// 32-bit register assignment from Acc64 "r5 = acc64.l"
 			if (right.isAcc64() && tokenCnt==3) {
 				if (!left.isCR()) throw new SyntaxException("Left side of ACC64 assignment must be a CR in '"+s+"'");
 				String opCode = right.isModLower() ? "rdacc64l" : (right.isModUpper() ? "rdacc64u" : (right.isModSat() ? "sat64" : null));
 				if (opCode == null) throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) or .SAT (Saturated) postfix in '"+s+"'");
-				return opCode + SEP + left.getOpText() + joinRemainder(tokenList, 3, stmt);
+				return rebuildStatement(opCode + SEP1 + left.getOpText(), stmt, tokenList, 3);
 			}
 			
 			
@@ -380,20 +514,23 @@ public class Toon {
 				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+tokenList[2]+"' function must be ACC32 in '"+s+"'");
 				// Special case, "ACC32 = INTERP (cr+const)" - right side is indirect sum of CR and a constant
 				if (tokenList[2].toLowerCase().equals("interp")) {
-					if (!right.isDMIndirect()) throw new SyntaxException("INTERP operand must be indirect (CR+constant). Expected parens not found.");
+					if (!right.isDMIndirect()) throw new SyntaxException("INTERP operand must be indirect '(CR)' or '(CR+constant)'. Expected parens not found.");
 					String is = right.getOpText();
 					String parts[] = Util.split(is, "\\+", 2);
-					if (parts.length != 2)  throw new SyntaxException("INTERP operand must be of the form (CR+constant).");
+					if (parts.length < 1)  throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'.");
 					Operand p1 = new Operand(parts[0], rnMap);
-					Operand p2 = new Operand(parts[1], rnMap);
-					if (!p1.isCR()) throw new SyntaxException("INTERP operand must be of the form (CR+constant). CR not found.");
-					if (p2.isReg()) throw new SyntaxException("INTERP operand must be of the form (CR+constant). Constant not found.");
+					Operand p2 = new Operand("0", rnMap); // Assume constant is zero unless specified
+					if (parts.length == 2) { // Second part was specified
+						p2 = new Operand(parts[1], rnMap);
+					}
+					if (!p1.isCR()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. CR not found.");
+					if (p2.isReg()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. Constant not found.");
 					// Looks like a valid INTERP statement
-					return "interp" + SEP + p1.getOpText() + "," + p2.getOpText() + joinRemainder(tokenList, 4, stmt);
+					return rebuildStatement("interp" + SEP1 + p1.getOpText() + "," + p2.getOpText(), stmt, tokenList, 4);
 				}
 				if (!left.isPlain() || !right.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers in '"+s+"'");
 				if (!right.isCR()) throw new SyntaxException("Source for assignment operation must be a CR '"+s+"'");
-				return tokenList[2] + SEP + right.getOpText() + joinRemainder(tokenList, 4, stmt);
+				return rebuildStatement(tokenList[2] + SEP1 + right.getOpText(), stmt, tokenList, 4);
 			}
 			
 			// 2 arg functions "acc32 = <cr> <func> <op2>"
@@ -420,7 +557,7 @@ public class Toon {
 					if (!op1.isPlain()) throw new SyntaxException("Left operand for function '"+func+"' does not support indirectin or modifiers in '"+s+"'");
 				}
 				
-				return func + SEP + op1.getOpText() + "," + op2.getOpText() + joinRemainder(tokenList, 5, stmt);
+				return rebuildStatement(func + SEP1 + op1.getOpText() + "," + op2.getOpText(), stmt, tokenList, 5);
 			}
 			
 			// 2 arg functions "acc64 = <cr> <func> <op2>"
@@ -450,7 +587,7 @@ public class Toon {
 					if (!op2.isDMIndirect()) throw new SyntaxException("Right operand for function '"+func+"' is delay memory indirect constant, must be enclosed in parens.");
 				}
 				
-				return func + SEP + op1.getOpText() + "," + op2.getOpText() + joinRemainder(tokenList, 5, stmt);
+				return rebuildStatement(func + SEP1 + op1.getOpText() + "," + op2.getOpText(), stmt, tokenList, 5);
 			}
 			
 			// R to R assignments
@@ -497,7 +634,7 @@ public class Toon {
 				
 				if (opCode == null) throw new SyntaxException("Invalid register-to-register assigment statement in '"+s+"'");
 				
-				return opCode + SEP + left.getOpText() + "," + right.getOpText() + joinRemainder(tokenList, 3, stmt);
+				return rebuildStatement(opCode + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 			}
 			
 			// Assignment to CR from non-register source
@@ -513,14 +650,14 @@ public class Toon {
 					opCode = "rddel";
 				}
 				if (opCode == null) throw new SyntaxException("Invalid NonRegister-to-CR assigment statement in '"+s+"'");
-				return opCode + SEP + left.getOpText() + "," + right.getOpText() + joinRemainder(tokenList, 3, stmt);
+				return rebuildStatement(opCode + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 			}
 			
 			// Assignment from CR to non-register source
 			if (right.isCR()) {
 				// Write fixed delay memory address from CR "(3920) = r5"
 				if (!left.isModified() && left.isDMIndirect() && !right.isModified() && !right.isIndirect()) {
-					return "wrdel" + SEP + left.getOpText() + "," + right.getOpText() + joinRemainder(tokenList, 3, stmt);
+					return rebuildStatement("wrdel" + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 				}
 				throw new SyntaxException("Invalid CR-to-NonRegister assigment statement in '"+s+"'");
 			}
@@ -535,112 +672,174 @@ public class Toon {
 		// If no match above, it is not TOON format so pass it through
 		return s;
 			
-//			if (Ops0InstrSet.contains(tokenList[2])) { // Mnemonic is 3rd token
-//				// A simple "x = mnemonic" style TOON statements, just reformat to "mnemonic x".
-//				if (tokenCnt > 3) throw new SyntaxException("Invalid syntax for TOON '' mnemonic, too many tokens, should be 'x = <instr>'");
-//				return tokenList[2] + SEP + tokenList[0] + joinRemainder(tokenList, 3, stmt);
-//			}
-//			
-//			if (CopyInstrSet.contains(tokenList[2])) { // Mnemonic is 3rd token
-//				// Copy instructions 'target = instr source'. Source can be a const expression with multiple tokens.
-//				return tokenList[2] + SEP + tokenList[0] + "," + tokenList[3] + joinRemainder(tokenList, 4, stmt);
-//			}
-//			
-//			if (tokenCnt >= 4) { // All these require at least 4 tokens
-//				if (Ops2Acc32InstrSet.contains(tokenList[3])) { // Mnemonic is 4th token
-//					// 2 operand instructions that target acc32 'acc32 = x instr y'. Y can be a const express of multiple tokens
-//					if (tokenCnt < 5) throw new SyntaxException("TOON syntax error, missing one or more tokens in: '"+s+"'");
-//					if (!tokenList[0].toLowerCase().equals("acc32")) throw new SyntaxException("Invalid target on left side of assignment, target of this operation is ACC32: '"+s+"'");
-//					return tokenList[3]+SEP+tokenList[2]+","+tokenList[4]+joinRemainder(tokenList, 5, stmt);
-//				}
-//				
-//				if (Ops2Acc64InstrSet.contains(tokenList[3])) { // Mnemonic is 4th token (same as Ops2Acc32 except target is ACC64)
-//					// 2 operand instructions that target acc64 'acc64 = x instr y'
-//					if (tokenCnt < 5) throw new SyntaxException("TOON syntax error, missing one or more tokens in: '"+s+"'");
-//					if (!tokenList[0].toLowerCase().equals("acc64")) throw new SyntaxException("Invalid target on left side of assignment, target of this operation is ACC64: '"+s+"'");
-//					return tokenList[3]+SEP+tokenList[2]+","+tokenList[4]+joinRemainder(tokenList, 5, stmt);
-//				}
-//				
-//				if (Ops1Acc32InstrSet.contains(tokenList[2])) { // Mnemonic is 3rd token
-//					// 1 operand instructions that target acc32 'acc32 = instr y' --> 'instr y'. Assume Y could be multiple tokens.
-//					if (tokenCnt < 4) throw new SyntaxException("TOON syntax error, missing one or more tokens in: '"+s+"'");
-//					if (!tokenList[0].toLowerCase().equals("acc32")) throw new SyntaxException("Invalid target on left side of assignment, target of this operation is ACC32: '"+s+"'");
-//					return tokenList[2]+SEP+tokenList[3]+joinRemainder(tokenList, 4, stmt);
-//				}
-//				
-//				if (Ops1Acc64InstrSet.contains(tokenList[2])) { // Mnemonic is 3rd token
-//					// 1 operand instructions that target acc64 'acc64 = instr y' --> 'instr y'. Assume Y could be multiple tokens.
-//					if (tokenCnt < 4) throw new SyntaxException("TOON syntax error, missing one or more tokens in: '"+s+"'");
-//					if (!tokenList[0].toLowerCase().equals("acc64")) throw new SyntaxException("Invalid target on left side of assignment, target of this operation is ACC64: '"+s+"'");
-//					return tokenList[2]+SEP+tokenList[3]+joinRemainder(tokenList, 4, stmt);
-//				}
-//			}
-//			
-//			// If none of the above has matched, try to interpret "x = y" assignment statements by type inference
-//			// Note that 'x = cpy_** y' and 'x = instr' has already been handled if those copy operations have been coded that way.
-//			if (tokenCnt == 3) {
-//				String left = tokenList[0].toUpperCase();
-//				String right = tokenList[2].toUpperCase();
-//				
-//				// Detect special notation for cpy_cmx instruction, the right operand is inclosed in () to
-//				// indicate the indirection.
-//				boolean indirect = false;
-//				if (right.startsWith("(") && right.endsWith(")")) {
-//					indirect = true;
-//					right = Util.jsSubstring(right, 1, right.length()-1); // Remove parens
-//					tokenList[2] = right; // Use stripped name when generating code
-//				}
-//				
-//				// Targets and sources can by symbolic names for registers, defined by prior ".rn" statements.
-//				// If the left or right operands are symbolics we use the resolved actual register name.
-//				//TODO: Does the .rn have to occur before its first use??
-//				
-//				if (rnMap.containsKey(left)) left = rnMap.get(left);
-//				if (rnMap.containsKey(right)) right = rnMap.get(right);
-//				
-//				char targetType = '?'; // Assume core register
-//				char sourceType = '?';
-//				
-//				if (right.matches("MR[0-9]+")) {
-//					sourceType = 'm';
-//				}
-//				else if (CrSet.contains(right)) {
-//					sourceType = 'c';
-//				}
-//				else if (SrfNameSet.contains(right)) {
-//					sourceType = 's';
-//				}
-//				
-//				if (left.matches("MR[0-9]+")) {
-//					targetType = 'm';
-//				}
-//				else if (left.equals("ACC32") || left.matches("R[0-9]+") || left.equals("FLAGS")) {
-//					targetType = 'c';
-//				}
-//				else if (SrfNameSet.contains(left)) {
-//					targetType = 's';
-//				}
-//				
-//				if (targetType == '?') throw new SyntaxException("Unable to infer type of target (left side) token in '"+s+"'");
-//				if (sourceType == '?') throw new SyntaxException("Unable to infer type of source (right side) token in '"+s+"'");
-//				
-//				// Indirection only allowed on MR=CR assignments
-//				if (indirect && ((targetType!='c') || sourceType!='c')) {
-//					throw new SyntaxException("Invalid copy operation, indirection can only be used when the target and source are CRs '"+s+"'");
-//				}
-//				
-//				// Only some combinations can be implemented in a single instruction
-//				if(
-//					(targetType=='c' && (sourceType=='c' || sourceType=='m' || sourceType=='s')) ||
-//					(targetType=='m' && sourceType=='c') ||
-//					(targetType=='s' && sourceType=='c')
-//				) {
-//					// Now we can generate an appropriate copy statement
-//					return "cpy_" + targetType + (indirect==true?"mx":sourceType) + SEP + tokenList[0]+"," + tokenList[2] + joinRemainder(tokenList, 3, stmt);
-//				}
-//				throw new SyntaxException("Unsupported copy operation source type '"+sourceType+"' and target type '"+targetType+"' in statement '"+s+"'");
-//			}
-//		}
+	}
+
+	/**
+	 * Returns the given source statement 's' as-is, or if it is recognized as an FXCore assembler
+	 * statement, an equivalent TOON statement is returned. This assumes valid assembler code, it is
+	 * not intended to validate the incoming assembler. The input may contain TOON statements which
+	 * will be passed through unchanged.
+	 * @param s
+	 * @return
+	 * @throws Exception
+	 */
+	public String asmToToon(String s) throws Exception {
+		
+		// Assembler statements are:
+		// [<label>]:<optionalWS><opcode><reqdWS><op1><optionalWS>[,<optioalWS><op2>]
+		
+		Stmt stmt = new Stmt(s, 0, ""); // Comments and label are removed and text is trimmed
+		
+		// Now we have
+		// <opcode> <op1>[,<op2>]
+		
+		String[] tokenList = Util.split(stmt.getText(), "\\p{Space}+", 2); // Extract opcode which must be whitespace delimited + remainder
+		int tokenCnt = tokenList.length;
+		if (tokenCnt < 2) return s; // Not anything we recognize, pass it through with no changes
+		
+		// Extract parts
+		String opcode = tokenList[0].trim().toLowerCase();
+		String opList[] = Util.split(tokenList[1].trim(), ",", 2); // Separate operands
+		String op1 = opList.length > 0 ? opList[0].trim() : "";
+		String op2 = opList.length > 1 ? opList[1].trim() : "";
+		
+		// Copy assignments (no operator)
+		if (ToonableCopySet.contains(opcode)) {
+			// Special cases for most that are not CPY_XX
+			switch (opcode) {
+			case "cpy_cmx":
+				op2 = "[" + op2 + "]"; // Right operand is special syntax for indirect MR access
+				break;
+			case "wrdld": 
+				op1 = op1 + ".U"; // Left operand gets .U postfix
+				break;
+			case "rdacc64u":
+				op2 = "ACC64.U";
+				break;
+			case "rdacc64l":
+				op2 = "ACC64.L";
+				break;
+			case "ldacc64u":
+				op2 = op1;
+				op1 = "ACC64.U";
+				break;
+			case "ldacc64l":
+				op2 = op1;
+				op1 = "ACC64.L";
+				break;
+			case "sat64":
+				op2 = "ACC64.SAT";
+				break;
+			case "rddel": // Right operand delay-memory indirect
+			case "rddelx":
+			case "rddirx":
+				op2 = "(" + op2 + ")";
+				if (opcode.equals("rddirx")) op2 = "@"+op2; // Absolute indirect
+				break;
+			case "wrdel": // Left operand delay-memory indirect
+			case "wrdelx":
+			case "wrdirx":
+				op1 = "(" + op1 + ")";
+				if (opcode.equals("wrdirx")) op1 = "@"+op1; // Absolute indirect
+				break;
+			case "interp": // CR+const indirect
+				if (op2.equals("0")) {
+					op2 = "INTERP (" + op1 + ")"; // Generate short-hand with no constant specified
+				}
+				else {
+					op2 = "INTERP (" + op1 + "+" + op2 + ")";
+				}
+				op1 = "ACC32"; // Left side is fixed
+			}
+			
+			return rebuildStatement(op1 + SEP3 + "= " + op2, stmt, null, 0);
+		}
+		
+		// Operational assignments with one operand
+		if (ToonableUnarySet.contains(opcode)) {
+			return rebuildStatement("ACC32" + SEP3 + "= "+ opcode + " " + op1, stmt, null, 0);
+		}
+		
+		// Operational assignments with two operands
+		if (ToonableOpsSet.contains(opcode)) {
+			String target = "ACC32"; // Most common case
+			String equals = "=";
+			
+			// Use generics where TOON supports them
+			switch (opcode) {
+			case "andi": opcode = "and"; break;
+			case "ori" : opcode = "or"; break;
+			case "xori": opcode = "xor"; break;
+			case "slr" : opcode = "sl"; break;
+			case "slsr": opcode = "sls"; break;
+			case "srr" : opcode = "sr"; break;
+			case "srar": opcode = "sra"; break;
+			case "addi": opcode = "add"; break;
+			case "addsi": opcode = "adds"; break;
+			case "multrr": opcode = "mult"; break;
+			case "multri": opcode = "mult"; break;
+			case "macrr": opcode = "macr"; break;
+			case "macri": opcode = "macr"; break;
+			case "macrd": opcode = "macd"; break;
+			case "macid": opcode = "macd"; break;
+			case "machrr": opcode = "machr"; break;
+			case "machri": opcode = "machr"; break;
+			case "machrd": opcode = "machd"; break;
+			case "machid": opcode = "machd"; break;
+			}
+			
+			// Targets 64 bit accumulator
+			switch (opcode) {
+			case "macrr":
+			case "macri":
+			case "macr":
+			case "macrd":
+			case "macid":
+			case "macd":
+			case "machrr":
+			case "machri":
+			case "machr":
+			case "machrd":
+			case "machid":
+			case "machd":
+				target = "ACC64";
+				equals = "+=";
+			}
+			
+			// Indirect addressing
+			switch (opcode) {
+			case "macrd":
+			case "macid":
+			case "macd":
+			case "machrd":
+			case "machid":
+			case "machd":
+				op2 = "(" + op2 + ")";
+			}
+			
+			return rebuildStatement(target + SEP3 + equals + " " + op1 + " " + opcode + " " + op2, stmt, null, 0);
+		}
+		
+		if (ToonableBranchSet.contains(opcode)) {
+			
+			switch (opcode) {
+			case "jgez": opcode = ">=0"; break;  
+			case "jneg": opcode = "<0"; break;
+			case "jnz":  opcode = "!=0"; break;
+			case "jz":   opcode = "=0"; break;
+			case "jzc":  opcode = "!=ACC32.SIGN"; break;
+			}
+			
+			if (opcode.equals("jmp")) { // No condition
+				return rebuildStatement("GOTO "+op1, stmt, null, 0);
+			}
+			
+			return rebuildStatement("IF " + op1 + " " + opcode + " GOTO " + op2, stmt, null, 0);
+		}
+		
+		// If no match above, it is not an assembler statement we recognize, so pass it through
+		return s;
+			
 	}
 	
 	/**
@@ -770,12 +969,19 @@ public class Toon {
 		int lineCnt = 0;
 		String readLine = null;
 		boolean doAnnotation = true;
+		boolean doUnTune = false;
 		
 		List<String> argsList = new ArrayList<>(Arrays.asList(args));
 		for (int i=0; i<argsList.size(); i++) {
 			if (argsList.get(i).equalsIgnoreCase("--noannotate")) {
 				doAnnotation = false;
-				argsList.remove(i);
+				argsList.remove(i--);
+				continue;
+			}
+			if (argsList.get(i).equalsIgnoreCase("--untoon")) {
+				doUnTune = true;
+				argsList.remove(i--);
+				continue;
 			}
 		}
 		
@@ -805,7 +1011,14 @@ public class Toon {
 					lineCnt++;
 					// Read source, translate, and write to output file
 					try {
-						writer.write(tooner.reTOON(readLine));
+						if (doUnTune) {
+							// Assembler --> TOON
+							writer.write(tooner.asmToToon(readLine));
+						}
+						else {
+							// TOON --> Assembler
+							writer.write(tooner.toonToAsm(readLine));
+						}
 						writer.newLine();
 					}
 					catch (SyntaxException se) {
@@ -817,7 +1030,9 @@ public class Toon {
 				}
 			}
 			
-			System.out.println("Tooning complete with "+errorCnt+" errors, "+lineCnt+" lines written to output file "+outFile.getAbsolutePath());
+			System.out.println("TOON processing "+(doUnTune?"ASM-->TOON":"TOON-->ASM")+" completed with "+errorCnt+" errors, "+lineCnt+" lines written.");
+			System.out.println("  Input file  : "+srcFile.getAbsolutePath());
+			System.out.println("  Output file : "+outFile.getAbsolutePath());
 			System.exit(errorCnt==0?0:2); // Exit code 2 = syntax errors occurred
 			
 		}

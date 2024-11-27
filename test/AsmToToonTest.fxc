@@ -1,0 +1,176 @@
+; Test suite for translation of ASM --> TOON syntax. Each line tests some assember statemnt and has a comment
+; indicating the expected TOON statement.
+;
+
+; Basic assignment
+cpy_cc		R0,R1			 /* r0 = r1 */ 
+cpy_cm		R0,MR100		 /* r0 = mr100 */
+cpy_mc		MR47,ACC32		 /* mr47=acc32 */
+cpy_cs		R0,SWITCH		 /* r0= switch */
+cpy_sc		OUT1,R5			 /* out1 = r5 */
+cpy_cc		R0,FLAGS		 /* r0 =flags */
+
+; Special assignment
+cpy_cmx		R0,R5			 /* r0=[r5] */
+wrdld		R0,2184			 /* r0.u = 2184 */ 
+
+; Acc64 assignments
+rdacc64u		R5			 /* r5 = ACC64.U */ 
+rdacc64l		R5			 /* r5 = ACC64.L */ 
+sat64			R5			 /* r5 = ACC64.SAT */ 
+ldacc64u		R5			 /* ACC64.U = r5 */ 
+ldacc64l		R5			 /* ACC64.L = r5 */ 
+
+; Delay memory load and store
+rddel		R4,2487			 /* r4 = (2487) */
+wrdel		2487,R4			 /* (2487) = r4 */
+
+rddelx		R0,R5			 /* r0 = (r5) */
+wrdelx		R5,R0			 /* (r5) = r0 */ 
+
+rddirx		R0,R5			 /* r0 = @(r5) */
+wrdirx		R5,R0			 /* @(r5) = r0 */
+
+interp		R5,200			 /* ACC32 = interp (r5+200) */
+interp		R0,0			 /* acc32 = interp (r0) */ 
+
+
+; Unary logic operations
+inv		R0				 /* ACC32 = inv r0 */
+abs		R0				 /* ACC32 = abs r0 */
+neg		R0				 /* ACC32 = neg r0 */ 
+log2	R0				 /* ACC32 = log2 r0 */
+exp2	R0				 /* ACC32 = exp2 r0 */ 
+
+; 32 bit logic operations
+
+or		R0,R1			 /* ACC32 = r0 or r1 */ 
+ori		R0,0X7			 /* ACC32 = r0 or 0x7 */ 
+
+and		R0,R1			 /* ACC32 = r0 and r1 */
+andi	R0,0X7			 /* ACC32 = r0 and 0x7 */
+
+xor		R0,R1			 /* ACC32 = r0 xor r1 */
+xori	R0,0X7			 /* ACC32 = r0 xor 0x7 */
+
+; shift left
+sl		R0,1			 /* acc32 = r0 sl 1 */ 
+slr		R0,R1			 /* acc32 = r0 sl r1 */
+
+sls		R0,1			 /* acc32 = r0 sls 1 */
+slsr	R0,R1			 /* acc32 = r0 sls r1 */
+
+; shift right
+sr		R0,1			 /* acc32 = r0 sr 1 */ 
+srr		R0,R1			 /* acc32 = r0 sr r1 */ 
+
+sra		R0,1			 /* acc32 = r0 sra 1 */
+srar	R0,R1			 /* acc32 = r0 sra r1 */ 
+
+; add
+add		R0,R1			 /* acc32 = r0 add r1 */ 
+addi	R0,0X10			 /* acc32 = r0 add 0x10 */ 
+
+; add signed
+adds	R0,R1			 /* acc32 = r0 adds r1 */ 
+addsi	R0,0.2			 /* acc32 = r0 adds 0.2 */
+
+; subtract
+sub		R0,R1			 /* acc32 = r0 sub r1 */ 
+subs	R0,R1			 /* acc32 = r0 subs r1 */
+
+; multiply
+multrr	R0,R1			 /* acc32 = r0 mult r1 */ 
+multri	R0,0.4			 /* acc32 = r0 mult 0.4 */
+
+; 64 bit summing operations
+macrr	R0,R1			 /* acc64 += r0 macr r1 */
+macri	R0,-0.2			 /* acc64 += r0 macr -0.2 */ 
+
+macrd	R0,181			 /* acc64 += r0 macd (181) */
+macid	0.2,1094		 /* acc64 += 0.2 macd (1094) */
+
+machrr	R0,R1			 /* acc64 += r0 machr r1 */ 
+machri	R0,0.25			 /* acc64 += r0 machr 0.25 */ 
+
+machrd	R0,100			 /* acc64 += r0 machd (100) */ 
+machid	0.2,100			 /* acc64 += 0.2 machd (100) */ 
+
+
+; Branching
+jgez	r0,target_label			 /* IF r0 >=0 GOTO target_label */ 
+jneg	r0,target_label			 /* IF r0 <0 GOTO target_label */
+jnz		r0,target_label			 /* IF r0 !=0 goto target_label */
+jz		r0,target_label			 /* if r0 =0 goto target_label */
+jzc		r0,target_label			 /* if r0 !=acc32.sign target_label */
+
+jmp		target_label			 /* GOTO target_label */
+
+target_label:
+
+// Test syntax variations
+andi		R7,5 + 2		 /* ACC32 = r7 and 5 + 2 */ 
+macrd		R0,200			 /* acc64 = r0 macd (200) */ 
+
+
+; All other instructions use FXCore assembler
+apa -0.1, 200
+apb 0.1, 0
+apra r0, 200
+aprb r0, 0
+aprra r0, r1
+aprrb r0, r1
+apma r0, mr10
+apmb r0, mr10
+chr lfo0|SIN, 200
+pitch rmp0|L4096, 4096
+set user0|15, r0
+
+; Validate use of assembler .rn directive
+.rn coeff r5
+.rn parm1 mr103
+.rn a acc32
+
+cpy_cc		A,COEFF			 /* a = coeff */ 
+cpy_cm		COEFF,PARM1		 /* coeff = parm1 */
+
+; Validate use of labels
+jmp		mylabel1			 /* jmp mylabel1 */ 
+jmp		mylabel2			 /* jmp mylabel2 */ 
+mylabel1: xor		R1,R2	 /* acc32 = r1 xor r2 */ 
+mylabel2: xor		R3,R4	 /* acc32=r3 xor r4 */ 
+xori		R0,8			 /* acc32 = r0 xor 8 */ 
+
+
+; Sample program
+.rn temp  r0
+.rn temp1 r1
+.rn scaleFactorMin r2
+.rn scaleFactorMax r3
+.rn scaleFactorRange r4
+.equ delayLen 512
+.mem delaymem0 delayLen
+.mem delaymem1 delayLen
+
+cpy_cs		ACC32,IN0			 /* acc32          = in0 */ 
+wrdel		DELAYMEM0,ACC32		 /* (delaymem0)    = acc32 */ 
+cpy_cs		ACC32,IN1			 /* acc32          = in1 */ 
+wrdel		DELAYMEM1,ACC32		 /* (delaymem1)    = acc32 */ 
+cpy_cs		TEMP,POT0_SMTH		 /* temp           = pot0_smth */ 
+wrdld		TEMP1,DELAYLEN		 /* temp1.u        = delayLen */ 
+multrr		TEMP,TEMP1			 /* acc32          = temp mult temp1 */ 
+cpy_cc		SCALEFACTORMIN,ACC32 /* scaleFactorMin = acc32 */ 
+cpy_cs		TEMP,POT1_SMTH		 /* temp           = pot1_smth */ 
+wrdld		TEMP1,DELAYLEN		 /* temp1.u        = delayLen */ 
+multrr		TEMP,TEMP1			 /* acc32          = temp mult temp1 */ 
+cpy_cc		SCALEFACTORMAX,ACC32 /* scaleFactorMax = acc32 */ 
+subs		SCALEFACTORMAX,SCALEFACTORMIN			 /* acc32          = scaleFactorMax subs scaleFactorMin */ 
+jgez		acc32,save_range	 /* if acc32 >=0 goto save_range */ 
+cpy_cc		TEMP,SCALEFACTORMAX	 /* temp           = scaleFactorMax */ 
+cpy_cc		SCALEFACTORMAX,SCALEFACTORMIN			 /* scaleFactorMax = scaleFactorMin */ 
+cpy_cc		SCALEFACTORMIN,TEMP	 /* scaleFactorMin = temp */ 
+abs			ACC32				 /* acc32          = abs acc32 */ 
+save_range: 
+cpy_cc		SCALEFACTORRANGE,ACC32		 /* scaleFactorRange = acc32 */ 
+
+

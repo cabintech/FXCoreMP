@@ -78,10 +78,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import com.cabintech.toon.SyntaxException;
@@ -326,7 +324,7 @@ public class FXCoreMPMain {
 			String arg = argsList.get(i);
 			if (arg.equalsIgnoreCase("--noannotate")) {
 				doAnnotation = false;
-				argsList.remove(i);
+				argsList.remove(i--);
 				continue;
 			}
 			if (arg.startsWith("-E")) { // Env variable for $if
@@ -342,7 +340,7 @@ public class FXCoreMPMain {
 					System.exit(1);
 				}
 				envMap.put(vs[0].toLowerCase(), vs[1]);
-				argsList.remove(i);
+				argsList.remove(i--);
 				continue;
 			}
 			
@@ -353,7 +351,7 @@ public class FXCoreMPMain {
 				} else {
 					verbose = parts[1].toLowerCase();
 				}
-				argsList.remove(i);
+				argsList.remove(i--);
 				continue;
 			}
 			
@@ -413,9 +411,10 @@ public class FXCoreMPMain {
 			
 			for (String s: outSource) {
 				lineCnt++;
-				// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain
+				// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain. We
+				// only xlate TOON-->Asm when doing macro expansion (never Asm-->TOON).
 				try {
-					s = tooner.reTOON(s);
+					s = tooner.toonToAsm(s);
 				}
 				catch (SyntaxException se) {
 					syntaxErrors++;
@@ -428,13 +427,11 @@ public class FXCoreMPMain {
 			};
 			
 			
-			Util.info("PreCPP Completed");
+			Util.info("Macro Processor Completed");
 			Util.info("  Included files:     "+includedFiles.size());
 			Util.info("  Macro definitions:  "+macroMap.size());
 			Util.info("  Output lines:       "+newSource.size()+" ("+outFile.getAbsolutePath()+")");
 			Util.info("  TOON syntax errors: "+syntaxErrors);
-			
-
 			
 		}
 		catch (Throwable t) {

@@ -15,6 +15,7 @@ public class Stmt {
 
 	private String fullText = null;
 	private String text = null;
+	private String label = "";
 	private String cmnt = "";
 	private int lineNum;
 	private String fileName;
@@ -32,7 +33,7 @@ public class Stmt {
 		this.fileName = fileName;
 		this.fullText = line;
 		
-		text = fullText; // By default the statement is all the raw text with no comment
+		text = fullText.trim(); // By default the statement is all the raw (trimmed) text with no comment
 		cmnt = "";
 		
 		if (!parse) {
@@ -89,7 +90,19 @@ public class Stmt {
 			}
 		}
 		
+		// Now look for leading "label:"
+		
 		text = text.trim();
+		int labIndex = text.indexOf(':');
+		if (labIndex > 0) {
+			// It is only a label if there is no whitespace before the ':'
+			String potentialLabel = Util.jsSubstring(text, 0, labIndex); // Get possible label text
+			if (!potentialLabel.contains(" ") && !potentialLabel.contains("\t")) {
+				// Looks like a label
+				label = potentialLabel + ": "; // Store with trailing colon and a single space
+				text = Util.jsSubstring(text, labIndex+1).trim(); // Remainder is the statement
+			}
+		}
 	}
 	
 	/**
@@ -118,6 +131,16 @@ public class Stmt {
 	
 	public String getComment() {
 		return cmnt;
+	}
+	
+	/**
+	 * If this statement has a leading "label:" the
+	 * label text (including trailing colon and a single space) is returned.
+	 * Otherwise an empty string is returned.
+	 * @return
+	 */
+	public String getLabel() {
+		return label;
 	}
 	
 	public boolean isBlockCommentStart() {
