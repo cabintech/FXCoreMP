@@ -18,7 +18,7 @@ public class Operand {
 	private String opText = "";					// Operand text with any indirect, prefix, or postfix indicators removed
 	private String resolvedName = null;			// Operand name resolved with any prior ".rn" rename statements
 	private boolean isDMIndirect = false;		// This is a delay memory indirect operand (x)
-	private boolean isAbsDMIndirect = false;  	// This is an absolute delay memory indirect operand @(x)
+	private boolean isAbsDMIndirect = false;  	// This is an absolute delay memory indirect operand #(x)
 	private boolean isMRIndirect = false;		// This is a memory register indirect operand [x]
 	private boolean isModUpper = false; 		// Has ".U" postfix modifier
 	private boolean isModLower = false; 		// Has ".L" postfix modifier
@@ -41,10 +41,10 @@ public class Operand {
 			opText = Util.jsSubstring(opText, 1, opText.length()-1); // Remove parens
 		}
 		
-		// Delay memory absolute indirect "@(x)"
-		else if (opText.startsWith("@(") && text.endsWith(")")) {
+		// Delay memory absolute indirect "#(x)"
+		else if (opText.startsWith("#(") && text.endsWith(")")) {
 			isAbsDMIndirect = true;
-			opText = Util.jsSubstring(opText, 2, opText.length()-1); // Remove @ and parens
+			opText = Util.jsSubstring(opText, 2, opText.length()-1); // Remove # and parens
 		}
 		
 		// Memory register indirect "[x]"
@@ -156,7 +156,7 @@ public class Operand {
 
 	/**
 	 * Returns if the syntax of this operand indicates an indirect absolute reference to delay memory (no use of the address generation unit (AGU)).
-	 * "@(operand)"
+	 * "#(operand)"
 	 * @return
 	 */
 	public boolean isAbsDMIndirect() {

@@ -608,7 +608,7 @@ public class Toon {
 					opCode = "rddelx";
 				}
 				
-				// Right side is absolute indirect to delay memory r0=@(r5)
+				// Right side is absolute indirect to delay memory r0=#(r5)
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isAbsDMIndirect()) {
 					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR in '"+s+"'");
 					opCode = "rddirx";
@@ -620,7 +620,7 @@ public class Toon {
 					opCode = "wrdelx";
 				}
 				
-				// Left side is absolute indirect to delay memory @(r0)=r5
+				// Left side is absolute indirect to delay memory #(r0)=r5
 				if (!left.isModified() && left.isAbsDMIndirect() && !right.isModified() && !right.isIndirect()) {
 					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR in '"+s+"'");
 					opCode = "wrdirx";
@@ -728,13 +728,13 @@ public class Toon {
 			case "rddelx":
 			case "rddirx":
 				op2 = "(" + op2 + ")";
-				if (opcode.equals("rddirx")) op2 = "@"+op2; // Absolute indirect
+				if (opcode.equals("rddirx")) op2 = "#"+op2; // Absolute indirect
 				break;
 			case "wrdel": // Left operand delay-memory indirect
 			case "wrdelx":
 			case "wrdirx":
 				op1 = "(" + op1 + ")";
-				if (opcode.equals("wrdirx")) op1 = "@"+op1; // Absolute indirect
+				if (opcode.equals("wrdirx")) op1 = "#"+op1; // Absolute indirect
 				break;
 			case "interp": // CR+const indirect
 				if (op2.equals("0")) {
