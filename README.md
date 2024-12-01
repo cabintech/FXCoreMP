@@ -6,4 +6,4 @@ FXCore programs. These two functions (macro processor and TOON syntax) may be us
 
 See the [main documentation pages](../../wiki) for an overview of the project, installation instructions, and reference material.
 
-See the [latest release page](releases/latest) for downloads.
+See the [latest release page](../../releases/latest) for downloads.
