@@ -5,3 +5,5 @@ implements an alternative assembler language syntax called "TOON" (Target Of Ope
 FXCore programs. These two functions (macro processor and TOON syntax) may be used together or independantly.
 
 See the [main documentation pages](../../wiki) for an overview of the project, installation instructions, and reference material.
+
+See the [latest release page](releases/latest) for downloads.
