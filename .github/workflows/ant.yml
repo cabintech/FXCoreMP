@@ -28,6 +28,11 @@ jobs:
     - name: Zip files
       run: |
         zip install.zip jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp
+    - uses: actions/upload-artifact@v4
+      with:
+        name: install.zip
+        path: install.zip
+        if-no-files-found: error
     - name: GIT commit and push all changed files
       if: false
       env: 
