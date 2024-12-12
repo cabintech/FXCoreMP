@@ -15,6 +15,7 @@ r0 = r1		; cpy_cc (inferred)
 r0 = mr100	; cpy_cm (inferred)
 mr47=acc32	; cpy_mc (inferred)
 r0= switch	; cpy_cs (inferred)
+r0 = in0	; cpy_cs (inferred)
 out1 = r5	; cpy_sc (inferred)
 r0 =flags	; cpy_cc (inferred)
 
@@ -36,8 +37,8 @@ r4 = (2487) ; rddel read r4 from abs mem addr
 r0 = (r5)   ; rddelx read DelayMem indirectly by R5
 (r5) = r0	; wrdelx
 
-r0 = @(r5)  ; rddirx read r0 from delaymem indirect and absolute
-@(r5) = r0	; wrdirx
+r0 = #(r5)  ; rddirx read r0 from delaymem indirect and absolute
+#(r5) = r0	; wrdirx
 
 ACC32 = interp (r5+200) ; interp
 acc32 = interp (r0) 	; interp

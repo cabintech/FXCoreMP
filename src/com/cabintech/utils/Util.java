@@ -1,5 +1,8 @@
 package com.cabintech.utils;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * @author Mark McMillan
  * Copyright (c) Cabintech Global LLC
@@ -65,5 +68,18 @@ public class Util {
 		if (FXCoreMPMain.verbose.equals("debug")) {
 			System.out.println(info);
 		}
+	}
+	
+	/**
+	 * Case-insensative string replacement.
+	 * From https://stackoverflow.com/questions/5054995/how-to-replace-case-insensitive-literal-substrings-in-java
+	 * @param source
+	 * @param target
+	 * @param replacement
+	 * @return
+	 */
+	public static String replaceAll(String source, String target, String replacement) {
+		return Pattern.compile(target, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(source)
+		.replaceAll(Matcher.quoteReplacement(replacement)); 
 	}
 }

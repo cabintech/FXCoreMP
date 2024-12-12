@@ -170,7 +170,7 @@ public class FXCoreMPMain {
 					Macro m = new Macro(macroLines);
 					String macroName = m.getName();
 					if (macroMap.containsKey(macroName)) {
-						throw new SyntaxException("Macro name '"+m.getName()+"' is already defined. Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+						throw new SyntaxException("Macro name '"+m.getName()+"' is already defined.", stmt);
 					}
 					macroMap.put(macroName, m);
 					inDefine = false;
@@ -195,13 +195,13 @@ public class FXCoreMPMain {
 				
 				else if (stmtText.startsWith("$if(")) {
 					// Condition section '$if(envname=xxx)'
-					if (inIf) throw new SyntaxException("Nested $if statements are not supported at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+					if (inIf) throw new SyntaxException("Nested $if statements are not supported.", stmt);
 					
 					int endParen = stmtText.indexOf(')');
-					if (endParen<0) throw new SyntaxException("Missing closing paren of $if statement at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+					if (endParen<0) throw new SyntaxException("Missing closing paren of $if statement.", stmt);
 					String conditionExp = Util.jsSubstring(stmtText, 4, endParen).trim();
 					String[] expParts = Util.split(conditionExp, "="); // Note if this is "!=" the ! stays with the left operand
-					if (expParts.length != 2) throw new SyntaxException("Invalid $if expression at line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+					if (expParts.length != 2) throw new SyntaxException("Invalid $if expression.", stmt);
 					boolean operator = true;
 					if (expParts[0].endsWith("!")) {
 						operator = false;
@@ -221,7 +221,7 @@ public class FXCoreMPMain {
 				//-----------------------------------------
 				else if (stmtText.startsWith("$include ")) {
 					if (stmtText.length() < 10) {
-						throw new SyntaxException("Invalid $include statement, no file specified");
+						throw new SyntaxException("Invalid $include statement, no file specified.", stmt);
 					}
 					String incFileName = stmtText.substring(9).replace("\"", "").trim();
 					if (!includedFiles.contains(incFileName)) { // Only include a file once
@@ -252,7 +252,7 @@ public class FXCoreMPMain {
 						Macro m = new Macro(macroLines);
 						String macroName = m.getName();
 						if (macroMap.containsKey(macroName)) {
-							throw new SyntaxException("Macro name '"+m.getName()+"' is already defined. Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+							throw new SyntaxException("Macro name '"+m.getName()+"' is already defined.", stmt);
 						}
 						macroMap.put(macroName, m);
 						omitOutput = true; // Do not output macro definition lines
@@ -267,7 +267,7 @@ public class FXCoreMPMain {
 					String expr = Util.jsSubstring(stmtText, 5);
 					String parts[] = Util.split(expr, "=");
 					if (parts.length != 2) {
-						throw new SyntaxException("Set statement invalid expression syntax in '"+stmtText+"' . Line "+stmt.getLineNum()+" in file '"+stmt.getFileName()+"'");
+						throw new SyntaxException("Set statement invalid expression syntax in '"+stmtText+"'.", stmt);
 					}
 					envMap.put(parts[0].trim().toLowerCase(), parts[1].trim()); // Store (or override) in env map
 					omitOutput = true; // Do not output the $set statement
@@ -301,7 +301,7 @@ public class FXCoreMPMain {
 			}
 			
 			if (inDefine) {
-				throw new SyntaxException("Unterminated macro definition, missing $endmacro.");
+				throw new SyntaxException("Unterminated macro definition, missing $endmacro in file "+ inFile.getAbsolutePath());
 			}
 			
 			SourceContext.endFile();
@@ -416,7 +416,7 @@ public class FXCoreMPMain {
 			// Macro processing
 			//---------------------------------------------------------------
 			
-			List<String> outSource = null;
+			List<String> outSource = new ArrayList<>();;
 			List<String> includedFiles = new ArrayList<>();
 			try {
 				if (doMacro) {
@@ -436,6 +436,7 @@ public class FXCoreMPMain {
 				syntaxErrors++;
 				System.out.println("Macro processing error:");
 				System.out.println("  "+se.getMessage());
+				System.out.println("  "+se.getStmtMessage());
 				doToon = false; // Force skip of TOON processing
 			}
 				
@@ -452,15 +453,18 @@ public class FXCoreMPMain {
 					// only xlate TOON-->Asm when doing macro expansion (never Asm-->TOON).
 					try {
 						if (toonModeNormal) {
-							s = tooner.toonToAsm(s);
+							// Create a Stmt so any errors can have context (e.g. line number, etc)
+							Stmt stmt = new Stmt(s, lineCnt, srcFile.getAbsolutePath());
+							s = tooner.toonToAsm(stmt);
 						} else {
 							s = tooner.asmToToon(s);
 						}
 					}
 					catch (SyntaxException se) {
 						syntaxErrors++;
-						System.out.println("TOON error on line "+lineCnt+" '"+s+"'");
+						System.out.println("TOON processing error:");
 						System.out.println("  "+se.getMessage());
+						System.out.println("  "+se.getStmtMessage());
 						// Continue processing the next line
 					}
 					toonOutput.add(s);

@@ -1,0 +1,53 @@
+; Simple FXCore program that delays each channel by a specific fixed multiple of 30ms.
+; This demonstrates use of FXCoreMP macros and TOON statements. Two identical macros are
+; defined, one generates native FXCore assembler, and the other produces TOON format assembler.
+
+.rn    temp              r0
+.equ   SAMPLES_30MS      0.03 * 48000 ; Number of samples in 30ms (@ 48kHz) = 1440
+
+; Delay times for each channel, in samples
+.equ   DELAY0            (SAMPLES_30MS * 1)
+.equ   DELAY1            (SAMPLES_30MS * 2)
+.equ   DELAY2            (SAMPLES_30MS * 3)
+.equ   DELAY3            (SAMPLES_30MS * 4)
+
+; Allocate delay memory
+.mem   delayMem0         DELAY0         
+.mem   delayMem1         DELAY1        
+.mem   delayMem2         DELAY2       
+.mem   delayMem3         DELAY3       
+
+;-------------------------------------------------------------------------------------
+; Macro to delay a channel (0-3) by a fixed amount (in samples)
+; using FXCore assembler code format
+;-------------------------------------------------------------------------------------
+$macro DELAY_CHANNEL_ASM(channelNum, delay, tempReg) ++
+cpy_cs      ${tempReg},in${channelNum}          ; Read audio input
+wrdel       delayMem${channelNum},${tempReg}    ; Put into delay buffer at current location
+
+rddel       ${tempReg}, delayMem${channelNum} + ${delay} ; Read delayed sample
+cpy_sc      out${channelNum}, ${tempReg}        ; Output delayed sample 
+$endmacro
+
+
+;-------------------------------------------------------------------------------------
+; Macro to delay a channel (0-3) by a fixed amount (in samples)
+; using TOON format assembler code
+;-------------------------------------------------------------------------------------
+$macro DELAY_CHANNEL_TOON(channelNum, delay, tempReg) ++
+${tempReg} = in${channelNum}          ; Read audio input
+(delayMem${channelNum}) = ${tempReg}  ; Put into delay buffer at current location
+
+${tempReg} = (delayMem${channelNum}+${delay}) ; Read delayed sample
+out${channelNum} = ${tempReg}         ; Output delayed sample 
+$endmacro
+
+;-------------------------------------------------------------------------------------
+;--- Execution starts here on each sample cycle
+;-------------------------------------------------------------------------------------
+
+$DELAY_CHANNEL_ASM(0, DELAY0, temp) ; Use ASM format
+$DELAY_CHANNEL_ASM(1, DELAY1, temp)
+$DELAY_CHANNEL_TOON(2, DELAY2, temp) ; Use TOON format
+$DELAY_CHANNEL_TOON(3, DELAY3, temp)
+

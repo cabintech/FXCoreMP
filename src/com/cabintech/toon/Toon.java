@@ -377,9 +377,7 @@ public class Toon {
 	 * @return
 	 * @throws Exception
 	 */
-	public String toonToAsm(String s) throws Exception {
-		
-		Stmt stmt = new Stmt(s, 0, ""); // Remove comments and labels
+	public String toonToAsm(Stmt stmt) throws Exception {
 		
 		//TODO: Make a custom splitter to better handle operators adjacent to operands
 		// acc66+=r0 macrr r1
@@ -417,7 +415,7 @@ public class Toon {
 			else if (token.contains("=")) {
 				// 'a=b'
 				String[] parts = Util.split(token, "=");
-				if (parts.length != 2) throw new SyntaxException("Invalid assignment syntax '"+s+"'");
+				if (parts.length != 2) throw new SyntaxException("Invalid assignment syntax.", stmt);
 				List<String> list = new ArrayList<>();
 				list.add(parts[0]);
 				list.add("=");
@@ -435,22 +433,22 @@ public class Toon {
 		if (tokenCnt >= 3 && tokenList[0].equalsIgnoreCase(".rn")) {
 			// Syntax: .rn name rX
 			rnMap.put(tokenList[1].toUpperCase(), tokenList[2].toUpperCase());
-			return s; // Nothing else to do with this statement, leave it unmodified
+			return stmt.getFullText(); // Nothing else to do with this statement, leave it unmodified
 		}
 		
-		if (tokenCnt < 2) return s; // All TOON statements have > 2 tokens, return anything else unmodified
+		if (tokenCnt < 2) return stmt.getFullText(); // All TOON statements have > 2 tokens, return anything else unmodified
 		
 		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.
 		if (tokenList[0].equalsIgnoreCase("if")) {
-			if (tokenCnt < 4) throw new SyntaxException("Invalid IF statement syntax, expected 4 tokens but found only "+tokenCnt+" in '"+s+"'");
+			if (tokenCnt < 4) throw new SyntaxException("Invalid IF statement syntax, expected 4 tokens but found only "+tokenCnt+".", stmt);
 			// 'IF <core-reg> <cond> <label>'
 			//TODO: For now the conditional expression must be space-separated, cannot write 'if r6>=0'
 			
 			String cond = CondJmpExpr.get(tokenList[2].toLowerCase());
-			if (cond == null) throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized in '"+s+"'");
+			if (cond == null) throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
 			
 			Operand target = new Operand(tokenList[1], rnMap);
-			if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR in '"+s+"'");
+			if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR.", stmt);
 			
 			// Skip optional 'goto' token
 			int labelIndex = 3;  // If no GOTO token
@@ -469,31 +467,31 @@ public class Toon {
 		
 		// Assignment style TOON statements 'x = ..."
 		if (tokenList[1].equals("=") || tokenList[1].equals("+=")) {
-			if (tokenCnt < 3) throw new SyntaxException("Invalid TOON instruction format, missing right side of assignment: '"+s+"'");
+			if (tokenCnt < 3) throw new SyntaxException("Invalid TOON instruction format, missing right side of assignment.", stmt);
 			
 			Operand left = new Operand(tokenList[0], rnMap);
 			Operand right = new Operand(tokenList[2], rnMap);
 			
 			// "+=" only supported for certain ACC64 assignments, it is for decoration only and not required
 			if (tokenList[1].equals("+=")) {
-				if (!left.isAcc64()) throw new SyntaxException("Summing operator '+=' is only valid for ACC64 assignments.");
-				if (!left.isPlain()) throw new SyntaxException("Indirect and modifications on ACC64 is not valid for summing operator '+=' assignments.");
-				if (!Ops2ArgAcc64Set.contains(tokenList[3].toLowerCase())) throw new SyntaxException("Summing operator is not valid for '"+tokenList[3]+"' instruction.");
+				if (!left.isAcc64()) throw new SyntaxException("Summing operator '+=' is only valid for ACC64 assignments.", stmt);
+				if (!left.isPlain()) throw new SyntaxException("Indirect and modifications on ACC64 is not valid for summing operator '+=' assignments.", stmt);
+				if (!Ops2ArgAcc64Set.contains(tokenList[3].toLowerCase())) throw new SyntaxException("Summing operator is not valid for '"+tokenList[3]+"' instruction.", stmt);
 				tokenList[1] = "="; // Treat like a regular assignment
 			}
 			
 			// Acc64 assignments from 32 bit registers "acc64.u = r5"
 			if (left.isAcc64() && tokenCnt==3) {
-				if (!right.isCR()) throw new SyntaxException("Right side of ACC64 assignment must be a CR in '"+s+"'");
+				if (!right.isCR()) throw new SyntaxException("Right side of ACC64 assignment must be a CR.", stmt);
 				char UL = left.isModLower() ? 'l' : (left.isModUpper() ? 'u' : '?');
-				if (UL=='?') throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) postfix in '"+s+"'");
+				if (UL=='?') throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) postfix.", stmt);
 				return rebuildStatement("ldacc64" + UL + SEP1 + right.getOpText(), stmt, tokenList, 3);
 			}
 			// 32-bit register assignment from Acc64 "r5 = acc64.l"
 			if (right.isAcc64() && tokenCnt==3) {
-				if (!left.isCR()) throw new SyntaxException("Left side of ACC64 assignment must be a CR in '"+s+"'");
+				if (!left.isCR()) throw new SyntaxException("Left side of ACC64 assignment must be a CR.", stmt);
 				String opCode = right.isModLower() ? "rdacc64l" : (right.isModUpper() ? "rdacc64u" : (right.isModSat() ? "sat64" : null));
-				if (opCode == null) throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) or .SAT (Saturated) postfix in '"+s+"'");
+				if (opCode == null) throw new SyntaxException("ACC64 must have .U or .L (Upper/Lower) or .SAT (Saturated) postfix.", stmt);
 				return rebuildStatement(opCode + SEP1 + left.getOpText(), stmt, tokenList, 3);
 			}
 			
@@ -502,53 +500,53 @@ public class Toon {
 			
 			// 1 arg functions "acc32 = <func> <cr>"
 			if ((tokenCnt >= 3) && Ops1ArgAcc32Set.contains(tokenList[2].toLowerCase())) {
-				if (tokenCnt < 4) throw new SyntaxException("Invalid assignment, missing expected operand after '"+tokenList[2]+"' in '"+s+"'");
+				if (tokenCnt < 4) throw new SyntaxException("Invalid assignment, missing expected operand after '"+tokenList[2]+"'.", stmt);
 				right = new Operand(tokenList[3], rnMap);
 				
-				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+tokenList[2]+"' function must be ACC32 in '"+s+"'");
+				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+tokenList[2]+"' function must be ACC32.", stmt);
 				// Special case, "ACC32 = INTERP (cr+const)" - right side is indirect sum of CR and a constant
 				if (tokenList[2].toLowerCase().equals("interp")) {
-					if (!right.isDMIndirect()) throw new SyntaxException("INTERP operand must be indirect '(CR)' or '(CR+constant)'. Expected parens not found.");
+					if (!right.isDMIndirect()) throw new SyntaxException("INTERP operand must be indirect '(CR)' or '(CR+constant)'. Expected parens not found.", stmt);
 					String is = right.getOpText();
 					String parts[] = Util.split(is, "\\+", 2);
-					if (parts.length < 1)  throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'.");
+					if (parts.length < 1)  throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'.", stmt);
 					Operand p1 = new Operand(parts[0], rnMap);
 					Operand p2 = new Operand("0", rnMap); // Assume constant is zero unless specified
 					if (parts.length == 2) { // Second part was specified
 						p2 = new Operand(parts[1], rnMap);
 					}
-					if (!p1.isCR()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. CR not found.");
-					if (p2.isReg()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. Constant not found.");
+					if (!p1.isCR()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. CR not found.", stmt);
+					if (p2.isReg()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. Constant not found.", stmt);
 					// Looks like a valid INTERP statement
 					return rebuildStatement("interp" + SEP1 + p1.getOpText() + "," + p2.getOpText(), stmt, tokenList, 4);
 				}
-				if (!left.isPlain() || !right.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers in '"+s+"'");
-				if (!right.isCR()) throw new SyntaxException("Source for assignment operation must be a CR '"+s+"'");
+				if (!left.isPlain() || !right.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers.", stmt);
+				if (!right.isCR()) throw new SyntaxException("Source for assignment operation must be a CR.", stmt);
 				return rebuildStatement(tokenList[2] + SEP1 + right.getOpText(), stmt, tokenList, 4);
 			}
 			
 			// 2 arg functions "acc32 = <cr> <func> <op2>"
 			if ((tokenCnt >= 4) && Ops2ArgAcc32Set.contains(tokenList[3].toLowerCase()) ) {
 				String func = tokenList[3].toLowerCase();
-				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"' in '"+s+"'");
+				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"'.", stmt);
 				Operand op1 = new Operand(tokenList[2], rnMap);
 				Operand op2 = new Operand(tokenList[4], rnMap);
 				
-				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC32 in '"+s+"'");
-				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC32 in '"+s+"'");
+				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC32.", stmt);
+				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC32.", stmt);
 				// Left side of func must be a CR for all 32-bit two operand instructions
-				if (!op1.isCR()) throw new SyntaxException("Left operand for function '"+func+"' must be a CR in '"+s+"'");
+				if (!op1.isCR()) throw new SyntaxException("Left operand for function '"+func+"' must be a CR.", stmt);
 				
 				// Some instructions have immediate and register forms for <op2> but we allow use of
 				// generic instruction names, e.g. "r0 = r1 and 0x1" is really the "andi" instruction, not "and".
 				// So we try to infer the correct instruction from the type of <op>.
-				func = inferFunc(func, op1, op2);
+				func = inferFunc(func, op1, op2, stmt);
 				
 				// Some special cases
 				if (func.equals("interp")) {
-					if (!op1.isDMIndirect()) throw new SyntaxException("Left operand for function '"+func+"' must be indirect notataion, enclose in parens. '"+s+"'");
+					if (!op1.isDMIndirect()) throw new SyntaxException("Left operand for function '"+func+"' must be indirect notataion, enclose in parens.", stmt);
 				} else {
-					if (!op1.isPlain()) throw new SyntaxException("Left operand for function '"+func+"' does not support indirectin or modifiers in '"+s+"'");
+					if (!op1.isPlain()) throw new SyntaxException("Left operand for function '"+func+"' does not support indirectin or modifiers.", stmt);
 				}
 				
 				return rebuildStatement(func + SEP1 + op1.getOpText() + "," + op2.getOpText(), stmt, tokenList, 5);
@@ -557,28 +555,28 @@ public class Toon {
 			// 2 arg functions "acc64 = <cr> <func> <op2>"
 			if ((tokenCnt >= 4) && Ops2ArgAcc64Set.contains(tokenList[3].toLowerCase()) ) {
 				String func = tokenList[3].toLowerCase();
-				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"' in '"+s+"'");
+				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"'.", stmt);
 				Operand op1 = new Operand(tokenList[2], rnMap);
 				Operand op2 = new Operand(tokenList[4], rnMap);
 				
-				if (!left.isAcc64()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC64 in '"+s+"'");
-				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC64 in '"+s+"'");
+				if (!left.isAcc64()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC64.", stmt);
+				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC64.", stmt);
 				
 				// Some instructions have immediate and register forms for <op2> but we allow use of
 				// generic instruction names, e.g. "r0 = r1 and 0x1" is really the "andi" instruction, not "and".
 				// So we try to infer the correct instruction from the type of <op>.
-				func = inferFunc(func, op1, op2);
+				func = inferFunc(func, op1, op2, stmt);
 				
 				// Left side of func must be a CR for most 64-bit two operand instructions
 				if (func.equals("macid") || func.equals("machid")) {
-					if (op1.isReg()) throw new SyntaxException("Left operand for function '"+func+"' cannot be a register, immediate constant value is required.");
+					if (op1.isReg()) throw new SyntaxException("Left operand for function '"+func+"' cannot be a register, immediate constant value is required.", stmt);
 				}
 				else {
-					if (!op1.isCR()) throw new SyntaxException("Left operand for function '"+func+"' must be a CR.");
+					if (!op1.isCR()) throw new SyntaxException("Left operand for function '"+func+"' must be a CR.", stmt);
 				}
 				// Some are indirect memory addressing
 				if (func.equals("macrd") || func.equals("macid") || func.equals("machrd") || func.equals("machid")) {
-					if (!op2.isDMIndirect()) throw new SyntaxException("Right operand for function '"+func+"' is delay memory indirect constant, must be enclosed in parens.");
+					if (!op2.isDMIndirect()) throw new SyntaxException("Right operand for function '"+func+"' is delay memory indirect constant, must be enclosed in parens.", stmt);
 				}
 				
 				return rebuildStatement(func + SEP1 + op1.getOpText() + "," + op2.getOpText(), stmt, tokenList, 5);
@@ -598,35 +596,35 @@ public class Toon {
 				
 				// Right side is MR indirect, e.g. cpy_cmx r0=[r5]
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isMRIndirect()) {
-					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect MR assignment must be a CR in '"+s+"'");
+					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect MR assignment must be a CR.", stmt);
 					opCode = "cpy_cmx";
 				}
 				
 				// Right side is indirect to delay memory r0=(r5)
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isDMIndirect()) {
-					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect delay memory assignment must be a CR in '"+s+"'");
+					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect delay memory assignment must be a CR.", stmt);
 					opCode = "rddelx";
 				}
 				
 				// Right side is absolute indirect to delay memory r0=#(r5)
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isAbsDMIndirect()) {
-					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR in '"+s+"'");
+					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR.", stmt);
 					opCode = "rddirx";
 				}
 				
 				// Left side is indirect to delay memory (r0)=r5
 				if (!left.isModified() && left.isDMIndirect() && !right.isModified() && !right.isIndirect()) {
-					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect delay memory assignment must be a CR in '"+s+"'");
+					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of indirect delay memory assignment must be a CR.", stmt);
 					opCode = "wrdelx";
 				}
 				
 				// Left side is absolute indirect to delay memory #(r0)=r5
 				if (!left.isModified() && left.isAbsDMIndirect() && !right.isModified() && !right.isIndirect()) {
-					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR in '"+s+"'");
+					if (!left.isCR() || !right.isCR()) throw new SyntaxException("Left and right sides of absolute indirect delay memory assignment must be a CR.", stmt);
 					opCode = "wrdirx";
 				}
 				
-				if (opCode == null) throw new SyntaxException("Invalid register-to-register assigment statement in '"+s+"'");
+				if (opCode == null) throw new SyntaxException("Invalid register-to-register assigment statement.", stmt);
 				
 				return rebuildStatement(opCode + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 			}
@@ -643,7 +641,7 @@ public class Toon {
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isDMIndirect()) {
 					opCode = "rddel";
 				}
-				if (opCode == null) throw new SyntaxException("Invalid NonRegister-to-CR assigment statement in '"+s+"'");
+				if (opCode == null) throw new SyntaxException("Invalid NonRegister-to-CR assigment statement.", stmt);
 				return rebuildStatement(opCode + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 			}
 			
@@ -653,18 +651,18 @@ public class Toon {
 				if (!left.isModified() && left.isDMIndirect() && !right.isModified() && !right.isIndirect()) {
 					return rebuildStatement("wrdel" + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 				}
-				throw new SyntaxException("Invalid CR-to-NonRegister assigment statement in '"+s+"'");
+				throw new SyntaxException("Invalid CR-to-NonRegister assigment statement.", stmt);
 			}
 			
 			// If none of the above, we don't recognize this assignment statement
-			throw new SyntaxException("Invalid assignment statement, function or operand types are not recognized in '"+s+"'");
+			throw new SyntaxException("Invalid assignment statement, function or operand types are not recognized.", stmt);
 			
 			
 		} // End of assignment statements
 			
 		
 		// If no match above, it is not TOON format so pass it through
-		return s;
+		return stmt.getFullText();
 			
 	}
 
@@ -867,7 +865,7 @@ public class Toon {
 	 * @return
 	 * @throws SyntaxException
 	 */
-	private static String inferFunc(String f, Operand op1, Operand op2) throws SyntaxException {
+	private static String inferFunc(String f, Operand op1, Operand op2, Stmt context) throws SyntaxException {
 		
 		f = f.toLowerCase();
 		
@@ -893,7 +891,7 @@ public class Toon {
 			case "srar":
 			case "macrr":
 			case "machrr":
-				throw new SyntaxException("Right operand '"+op2.getOpText()+"' is not a core register as required by instruction '"+f+"'");
+				throw new SyntaxException("Right operand '"+op2.getOpText()+"' is not a core register as required by instruction '"+f+"'", context);
 			}
 		}
 		else {
@@ -923,18 +921,18 @@ public class Toon {
 			case "sra":
 			case "macri":
 			case "macid":
-				throw new SyntaxException("Right operand is a register, but instruction '"+f+"' requires immediate (constant) value.");
+				throw new SyntaxException("Right operand is a register, but instruction '"+f+"' requires immediate (constant) value.", context);
 			}
 		}
 		
 		// Two instruction have reg/immediate value on the left side
 		if (f.equals("macid") || f.equals("machid")) {
 			// Explicit immediate form
-			if (op1.isReg()) throw new SyntaxException("Instruction '"+f+"' requires immedidate (const) left operand, but '"+op1.getOpText()+"' is a register.");
+			if (op1.isReg()) throw new SyntaxException("Instruction '"+f+"' requires immedidate (const) left operand, but '"+op1.getOpText()+"' is a register.", context);
 		}
 		else if (f.equals("macrd") || f.equals("machrd")) {
 			// Explicit register form
-			if (!op1.isReg()) throw new SyntaxException("Instruction '"+f+"' requires register left operand, but '"+op1.getOpText()+"' is not register.");
+			if (!op1.isReg()) throw new SyntaxException("Instruction '"+f+"' requires register left operand, but '"+op1.getOpText()+"' is not register.", context);
 		}
 		else if (f.equals("macd")) {
 			f = op1.isReg() ? "macrd" : "macid"; // Choose the right instruction based on type of op1

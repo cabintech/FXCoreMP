@@ -1,0 +1,15 @@
+.keyword.command { color: rgb(42, 0, 255); }
+.keyword.reg {color: rgb(0, 0, 0); background-color: rgb(255,255,124);  }
+.keyword.control { color: rgb(149, 0, 85); }
+.keyword.operator.math { color: rgb(0, 0, 0); }
+.keyword.operator.cond { color: rgb(149, 0, 85);  }
+.keyword.brackets { color: rgb(255,0,0); }
+.macro.defn { color: rgb(128, 64, 0); }
+.macro.arg.subst { color: rgb(0, 0, 0); font-style: italic; } /*text-decoration: underline; font-style: italic; }*/
+.macro.invocation { color: rgb(0, 0, 192); font-style: italic;}
+.string { color: rgb(42, 0, 255); }
+.comment { color: rgb(0, 170, 0); }
+
+.editor { background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); }
+.editor.lineHighlight  {background-color:  rgb(232, 242, 254); }
+.editor.selection {}

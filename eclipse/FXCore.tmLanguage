@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>patterns</key>
+        <array>
+            <dict>
+                <key>name</key>
+                <string>keyword.command.fxcore</string>
+                <key>match</key>
+                <!-- FXCore mnemonics plus TOON keywords and inferred mnemonics -->
+                <string>(?i)\b(if|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.control.fxcore</string>
+                <key>match</key>
+                <string>(?i)^\s*(\.creg|\.mreg|\.sfr|\.rn|\.equ|\.mem|\.creg|\.mreg|\.sreg)</string>
+            </dict>            
+            <dict>
+                <key>name</key>
+                <string>keyword.reg.cr.fxcore</string>
+                <key>match</key>
+                <!-- All Rnn up to R15 -->
+                <string>(?i)\b(r[0-9][0-5]*|acc32|flags)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.reg.acc64.fxcore</string>
+                <key>match</key>
+                <string>(?i)\b(acc64\.u|acc64\.l|acc64\.sat|acc64)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.reg.mr.fxcore</string>
+                <key>match</key>
+                <!-- All MRnnn up to MR129, excluding MR128 and MR129 -->
+                <string>(?i)\b((?!mr128|mr129$)mr[0-9][0-2]?[0-9]?)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.reg.sfr.fxcore</string>
+                <key>match</key>
+                <string>(?i)\b(in0|in1|in2|in3|out0|out1|out2|out3|pin|switch|pot0_k|pot1_k|pot2_k|pot3_k|pot4_k|pot5_k|pot0|pot1|pot2|pot3|pot4|pot5|pot0_smth|pot1_smth|pot2_smth|pot3_smth|pot4_smth|pot5_smth|lfo0_f|lfo1_f|lfo2_f|lfo3_f|ramp0_f|ramp1_f|lfo0_s|lfo0_c|lfo1_s|lfo1_c|lfo2_s|lfo2_c|lfo3_s|lfo3_c|ramp0_r|ramp1_r|maxtempo|taptempo|samplecnt|noise|bootstat|tapstkrld|tapdbrld|swdbrld|prgdbrld|oflrld)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.reg.flagbits.fxcore</string>
+                <key>match</key>
+                <string>(?i)\b(OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|TB20TB1|TB21TB1|TAPSTKY|NEWTT|TAPRE|TAPPE|TAPDB)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.operator.cond.fxcore</string>
+                <key>match</key>
+                <!-- All conditional operators. Made ugly by need to regex-escape many of them, and XML escape others -->
+                <string>(\=0|&amp;|&gt;=0|&lt;0|\!\=0|&lt;&gt;0|\!\=acc32.sign)</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.operator.math.fxcore</string>
+                <key>match</key>
+                <!-- All math Made ugly by need to regex-escape many of them, and XML escape others -->
+                <!-- * and / are esp ugly because they are operators and part of block /*comments*/ -->
+                <string>(\+|\-|\=|(?&lt;!\/)\*(?!\/)|(?&lt;!\*)(?&lt;!\/)\/(?!\/)(?!\*)|\^|&amp;)</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.brackets.fxcore</string>
+                <key>match</key>
+                <!-- Match all brakets including indirect absolute memory reference. -->
+                <string>(\[|\]|\(|\)|\)|\@\()</string>
+            </dict>            
+            <dict>
+                <key>name</key>
+                <string>string.quoted.fxcore</string>
+                <key>match</key>
+                <string>"[^"]*"</string>
+            </dict>            
+            <dict>
+                <key>name</key>
+                <string>label.fxcore</string>
+                <key>match</key>
+                <string>^\s*(\w+\:)</string>
+            </dict>            
+
+	<!-- Macros -->            
+            <dict>
+                <key>name</key>
+                <string>macro.defn.fxcore</string>
+                <key>match</key>
+                <string>(?i)(\$macro|\$endmacro|\$include|\$set|\$if|\$endif)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>macro.arg.subst.fxcore</string>
+                <key>match</key>
+                <!-- Macro arg substitution, virtual args have a leading colon -->
+                <string>\${\:?\w+}</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>macro.invocation.fxcore</string>
+                <key>match</key>
+                <string>\$\w+</string>
+            </dict>
+        
+            
+           <!-- Comments -->
+		<dict>
+			<key>name</key>
+			<string>comment.block.fxcore</string>
+			<key>begin</key>
+			<string>/\*</string>
+			<key>captures</key>
+			<dict>
+				<key>0</key>
+				<dict>
+					<key>name</key>
+					<string>punctuation.definition.comment.fxcore</string>
+				</dict>
+			</dict>
+			<key>end</key>
+			<string>\*/</string>
+		</dict>            
+		<dict>
+			<key>name</key>
+			<string>comment.line.fxcore</string>
+			<key>begin</key>
+			<string>(;|//)</string>
+			<key>captures</key>
+			<dict>
+				<key>0</key>
+				<dict>
+					<key>name</key>
+					<string>punctuation.definition.comment.fxcore</string>
+				</dict>
+			</dict>
+			<key>end</key>
+			<string>\n</string>
+		</dict>            
+		
+		
+            
+        </array>
+        <key>name</key>
+        <string>FXCore</string>
+        <key>scopeName</key>
+        <string>source.fxcore</string>
+	<key>uuid</key>
+	<string>ecc90009-2bed-4b03-b7e6-1ab13ee10e1d</string>
+        <key>fileTypes</key>
+        <array>
+            <string>fxc</string>
+            <string>fxc-mp</string>
+            <string>fxm</string>
+            <string>fxo</string>
+            <string>toon</string>
+        </array>
+    </dict>
+</plist>
