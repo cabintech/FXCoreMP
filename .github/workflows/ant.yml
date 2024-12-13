@@ -3,6 +3,7 @@
 
 name: Java CI
 
+# Trigger this workflow on any push to MAIN branch
 on:
   push:
     branches: [ "main" ]
@@ -17,26 +18,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Clone
+      uses: actions/checkout@v4 # This will checkout (clone) the repo to this build machine
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'oracle'
+        
     - name: Build with Ant
       run: ant -noinput -buildfile build.xml
+      
     - name: Zip files
       if: false
       run: zip install.zip jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp
+      
     - name: List files
+      if: false
       run: ls -la
+      
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: install
+        name: install # Artifact will be zip of PATH files as <name>.zip
         path: |
           build/jar/FXCoreMP.jar 
-          bild/*.cmd 
+          build/*.cmd 
           eclipse/ 
           notepadpp/ 
           test/SamplePgm.fxc
