@@ -33,7 +33,12 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: install.zip
-        path: jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp/ ../test/SamplePgm.fxc
+        path: |
+          jar/FXCoreMP.jar 
+          *.cmd 
+          ../eclipse/ 
+          ../notepadpp/ 
+          ../test/SamplePgm.fxc
         if-no-files-found: error
     - name: GIT commit and push all changed files
       if: false
