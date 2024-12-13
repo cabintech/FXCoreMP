@@ -41,14 +41,3 @@ jobs:
           notepadpp/ 
           test/SamplePgm.fxc
         if-no-files-found: error
-    - name: GIT commit and push all changed files
-      if: false
-      env: 
-        CI_COMMIT_MESSAGE: GitHub Action Build Artifacts
-        CI_COMMIT_AUTHOR: GitHub Action
-      run: |
-        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-        git config --global user.email "admin@cabintechglobal.com"
-        git add jar/
-        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
-        git push
