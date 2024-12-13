@@ -33,6 +33,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: install.zip
+        working-directory: ./
         path: |
           jar/FXCoreMP.jar 
           *.cmd 
