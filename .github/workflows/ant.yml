@@ -37,8 +37,24 @@ jobs:
     - name: List files
       if: false
       run: ls -la
+
+    - name: Copy install files
+      run: |
+        mkdir ../install
+        cp ../build/jar/FXCoreMP.jar ../install
+        cp ../build/*.cmd ../install
+        cp ../test/SamplePgm.fxc ../install
+        
+    - name: Upload old
+      uses: actions/upload-artifact@v4
+      with:
+        name: install # Artifact will be zip of PATH files as <name>.zip
+        path: |
+          install/*
+        if-no-files-found: error
       
-    - name: Upload
+    - name: Upload old
+      if: false
       uses: actions/upload-artifact@v4
       with:
         name: install # Artifact will be zip of PATH files as <name>.zip
