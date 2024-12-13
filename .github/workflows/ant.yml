@@ -51,6 +51,8 @@ jobs:
         name: install # Artifact will be zip of PATH files as <name>.zip
         path: |
           install/*
+          notepadpp/
+          eclipse/
         if-no-files-found: error
       
     - name: Upload old
