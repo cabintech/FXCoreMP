@@ -9,7 +9,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./build
+    working-directory: ./build  # Note applies to RUN steps only, not USES steps
 
 jobs:
   build:
@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -25,16 +24,13 @@ jobs:
         distribution: 'oracle'
     - name: Build with Ant
       run: ant -noinput -buildfile build.xml
-    - name: Zip files
-      if: false
-      run: zip install.zip jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp
     - name: List files
+      if: false # Change to true to list files in the working dir
       run: ls -la
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: install.zip
-        working-directory: ./
+        name: install # Artifacts are auto zipped into "<name>.zip"
         path: |
           build/jar/FXCoreMP.jar 
           bild/*.cmd 
@@ -42,14 +38,3 @@ jobs:
           notepadpp/ 
           test/SamplePgm.fxc
         if-no-files-found: error
-    - name: GIT commit and push all changed files
-      if: false
-      env: 
-        CI_COMMIT_MESSAGE: GitHub Action Build Artifacts
-        CI_COMMIT_AUTHOR: GitHub Action
-      run: |
-        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-        git config --global user.email "admin@cabintechglobal.com"
-        git add jar/
-        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
-        git push
