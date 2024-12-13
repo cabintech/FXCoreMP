@@ -40,17 +40,19 @@ jobs:
 
     - name: Copy install files
       run: |
-        mkdir ../install
-        cp ../build/jar/FXCoreMP.jar ../install
-        cp ../build/*.cmd ../install
-        cp ../test/SamplePgm.fxc ../install
+        mkdir ../bin
+        mkdir ../samples
+        cp ../build/jar/FXCoreMP.jar ../bin
+        cp ../build/*.cmd ../bin
+        cp ../test/SamplePgm.fxc ../samples
         
     - name: Upload old
       uses: actions/upload-artifact@v4
       with:
         name: install # Artifact will be zip of PATH files as <name>.zip
         path: |
-          install/*
+          bin/
+          samples/
           notepadpp/
           eclipse/
         if-no-files-found: error
