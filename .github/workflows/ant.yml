@@ -9,7 +9,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./build  # Note applies to RUN steps only, not USES steps
+    working-directory: ./build
 
 jobs:
   build:
