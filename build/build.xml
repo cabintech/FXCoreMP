@@ -6,7 +6,11 @@
     	<mkdir dir="jar"/>
     </target>
     <target name="compile" depends="init">
-    	<javac srcdir="../src" destdir="bin"/>
+    	<javac srcdir="../src" destdir="bin">
+    	    <classpath>
+    	        <pathelement path="../lib/EvalEx-3.4.0.jar"/>
+    	    </classpath>
+		</javac>    		
     </target>
     <target name="create_run_jar" depends="compile">
         <jar destfile="jar/FXCoreMP.jar" filesetmanifest="mergewithoutmain">
