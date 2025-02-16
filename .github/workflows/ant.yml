@@ -3,13 +3,14 @@
 
 name: Java CI
 
+# Trigger this workflow on any push to MAIN branch
 on:
   push:
     branches: [ "main" ]
 
 defaults:
   run:
-    working-directory: ./build
+    working-directory: ./build # Note this is used only for RUN steps, not USES
 
 jobs:
   build:
@@ -17,25 +18,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Clone
+      uses: actions/checkout@v4 # This will checkout (clone) the repo to this build machine
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'oracle'
+        
     - name: Build with Ant
       run: ant -noinput -buildfile build.xml
+      
     - name: Zip files
-      run: |
-        zip install.zip jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp
-    - name: GIT commit and push all changed files
       if: false
-      env: 
-        CI_COMMIT_MESSAGE: GitHub Action Build Artifacts
-        CI_COMMIT_AUTHOR: GitHub Action
+      run: zip install.zip jar/FXCoreMP.jar *.cmd ../eclipse/ ../notepadpp
+      
+    - name: List files
+      if: false
+      run: ls -la
+
+    - name: Copy install files
       run: |
-        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-        git config --global user.email "admin@cabintechglobal.com"
-        git add jar/
-        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
-        git push
+        mkdir ../bin
+        mkdir ../samples
+        cp ../build/jar/FXCoreMP.jar ../bin
+        cp ../build/*.cmd ../bin
+        cp ../test/SamplePgm.fxc ../samples
+        
+    - name: Upload old
+      uses: actions/upload-artifact@v4
+      with:
+        name: install # Artifact will be zip of PATH files as <name>.zip
+        path: |
+          bin/
+          samples/
+          notepadpp/
+          eclipse/
+        if-no-files-found: error
+      
+    - name: Upload old
+      if: false
+      uses: actions/upload-artifact@v4
+      with:
+        name: install # Artifact will be zip of PATH files as <name>.zip
+        path: |
+          build/jar/FXCoreMP.jar 
+          build/*.cmd 
+          eclipse/ 
+          notepadpp/ 
+          test/SamplePgm.fxc
+        if-no-files-found: error

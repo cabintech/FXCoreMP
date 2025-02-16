@@ -1,5 +1,7 @@
 # FXCoreMP Tools
 This project contains code and support files for 3 major tooling enhancements for the  [FXCore DSP Assembler](https://www.experimentalnoize.com/product_FXCore.php).
+These tools were developed to support the firmware used in our [CT3680](https://cabintechglobal.com/ct3680) multichannel delay module.
+
 The major features this project adds to FXCore assembly development include:
 * A macro-substitution language for FXCore assembler similar to
 how the C/C++ preprocessor adds macro capabilities to C and C++ language files.
