@@ -163,4 +163,9 @@ public class Stmt {
 		cmnt = "";
 		fullText = text;
 	}
+	
+	@Override
+	public String toString() {
+		return getFullText();
+	}
 }

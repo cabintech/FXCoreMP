@@ -1,5 +1,7 @@
 package com.cabintech.fxcoremp;
 
+import java.math.BigDecimal;
+
 /**
  * @author Mark McMillan
  * Copyright (c) Cabintech Global LLC
@@ -64,13 +66,17 @@ import java.util.TreeMap;
 
 import com.cabintech.toon.SyntaxException;
 import com.cabintech.utils.Util;
+import com.ezylang.evalex.Expression;
+import com.ezylang.evalex.config.ExpressionConfiguration;
 
 public class Macro implements Constants {
 	
 	private String macroName = null;							// Macro name
 	private List<MacroParm> argNames = new ArrayList<>();				// List of argument name/direction
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
+	static private Map<String, Object> equMap = new HashMap<>();		// Map of symbols and expressions created by .equ statements
 	private String sourceFile = null;
+	private static ExpressionConfiguration exprConfig = ExpressionConfiguration.builder().decimalPlacesRounding(12).build();
 	
 	private static int lastUnique = 0; // Last used ${:unique} macro-scope virtual arg value
 	
@@ -305,20 +311,22 @@ public class Macro implements Constants {
 			// Macro form: $mac-name<white-space> or $mac-name() or $mac-name(args)
 			
 			String text = stmt.getText(); // Get trimmed text with comments removed
-			
 			text = text + " "; // Insure line ends in white space to simplify indexing
-			int start = text.lastIndexOf('$'); // Right-to-left scanning will insure we process nested macros inside-out
-			if (start < 0) {
-				// No macros to expand, copy full statement to output and continue with next stmt
-				expanded.add(stmt.getFullText());
-				continue;
-			}
 			
+			int start = text.lastIndexOf('$'); // Right-to-left scanning will insure we process nested macros inside-out
+//			if (start < 0) {
+//				// No macros to expand, copy full statement to output and continue with next stmt
+//				expanded.add(stmt.getFullText());
+//				continue;
+//			}
+			
+			boolean expansionOccured = false;
 			while (start >= 0) {
 				// We expect the macro name is next, it ends at first non-identifier char
 				String macroName = "";
 				char c = ' ';
 				int nameEnd = start+1;
+				expansionOccured = true; // At least one expansion has been done
 				
 				// Build up macro name until non-valid identifier char. Since we added a blank to
 				// the end we will always find a non-valid char before the end of the text.
@@ -341,13 +349,14 @@ public class Macro implements Constants {
 				
 				int end = 0; // Index of end of the macro invocation text
 				String args[] = new String[0];
+				String rawArgs = "";
 				if (c == '(') {
 					// The macro invocation has an arg list. Since we are evaluating macros inside-out, the arg
 					// list has no macros in it, just literal text.
-					String argListText = extractArgList(text, nameEnd);
-					if (argListText == null) throw new SyntaxException("Invalid macro argument list '"+text+"'.", stmt);
-					args = Util.split(argListText, ",");
-					end = nameEnd + argListText.length() + 2; // start + name + args + parens + $ char
+					rawArgs = extractArgList(text, nameEnd);
+					if (rawArgs == null) throw new SyntaxException("Invalid macro argument list '"+text+"'.", stmt);
+					args = Util.split(rawArgs, ",");
+					end = nameEnd + rawArgs.length() + 2; // start + name + args + parens + $ char
 				}
 				else {
 					// No-arg invocation
@@ -355,7 +364,7 @@ public class Macro implements Constants {
 				}
 				
 				// Expand the macro
-				List<String> macExpanded = Macro.evalMacroInvocation(macroName, args, stmt);
+				List<String> macExpanded = Macro.evalMacroInvocation(macroName, args, rawArgs, stmt);
 				
 				// The first line of expansion replaces the macro invocation in the current line. Any additional lines are added immediately following
 				if (macExpanded.size() == 0) {
@@ -369,7 +378,9 @@ public class Macro implements Constants {
 				else {
 					// Any multi-line expansion replaces the source line without any farther nested expansion
 					text = ""; // Current line is replaced
+					expanded.add(";--- BEGIN MACRO: "+macroName+" "+stmt.getComment());
 					expanded.addAll(macExpanded);
+					expanded.add(";--- END MACRO: "+macroName);
 				}
 
 				// Scan (leftward) for more macro invocations
@@ -377,9 +388,33 @@ public class Macro implements Constants {
 
 			}
 			
-			
-			// Now that this line is fully expanded, add it to the output
-			expanded.add(text);
+			// After macros have been expanded, keep track of assembler .equ statements that give symbolic names to expressions
+			// so those symbolic names can be used in $_eval() expressions.
+			String[] tokenList = Util.split(text, "\\p{Space}+", 3); // Tokenize on white space including tabs
+			if (tokenList.length == 3 && tokenList[0].equalsIgnoreCase(".equ")) {
+				// Syntax: .equ symbolic-name expression
+				// Try to evaluate the expression now so it can be used in subsequent expressions since
+				// our $_eval() function does not operate recursively. If we cannot evaluate it (FXCore assembler
+				// EQU expressions may not match the capability of our expression evaluator), then just store
+				// it as the raw string and hope it is not used in an $_eval() expression. 
+				String symbol = tokenList[1].toUpperCase();
+				String exprStr = tokenList[2].toUpperCase();
+				try {
+					Object value = new Expression(exprStr, exprConfig).withValues(equMap).evaluate().getValue();
+					equMap.put(symbol, value);
+				}
+				catch (Throwable t) {
+					// If for any reason the expression cannot be evaluated, just store it as its string representation
+					equMap.put(symbol, exprStr);
+				}
+			}
+
+			if (!expansionOccured) {
+				expanded.add(stmt.getFullText()); // Did nothing here, copy full text to output
+			}
+			else {
+				expanded.add(text.trim()); // Output expanded line
+			}
 		}
 
 		return expanded;
@@ -425,6 +460,79 @@ public class Macro implements Constants {
 	}
 	
 	/**
+	 * Given a built-in function name, returns the evaluation of the function with the given args. Note that
+	 * any macros in the args have already been expanded so the args are simple strings.
+	 * @param funcName
+	 * @param args
+	 * @param stmt
+	 * @return
+	 * @throws Exception
+	 */
+	public static List<String> evalBuiltInFunction(String funcName, String[] args, String rawArgs, Stmt stmt) throws Exception {
+		
+		List<String> result = new ArrayList<>();
+		
+		switch (funcName.toLowerCase()) {
+		case "_eval":
+			//if (args.length != 1) {
+			//	throw new SyntaxException("Expected 1 arg for _eval() function, found "+args.length+" args.", stmt);
+			//}
+			// Evaluate a math expression (using https://github.com/ezylang/EvalEx). The expression is the entire
+			// macro argument (rawArgs), not the comma-delimited args[] array.
+			try {
+				Expression expr = new Expression(rawArgs, exprConfig);
+				Object value = expr.withValues(equMap).evaluate().getValue();
+				// By default BigDecimal results use exponent notation, we never want that.
+				String valueStr = value instanceof BigDecimal ? ((BigDecimal)value).toPlainString() : value.toString();
+				result.add(valueStr);
+			}
+			catch (Throwable t) {
+				throw new SyntaxException("_eval() failed: "+t.getMessage(), stmt);
+			}
+//			
+//			String expr = args[0];
+//			String parts[] = Util.split(expr, "\\+"); // Split on + - * / %
+//			if (parts.length != 2) {
+//				throw new SyntaxException("Expression '"+expr+"' not recognized in _eval() function.", stmt);
+//			}
+//			try {
+//				double left = Double.parseDouble(parts[0].trim());
+//				double right= Double.parseDouble(parts[1].trim());
+//				double value = 0.0;
+//				String operator = "+"; // parts[1].trim();
+//				switch (operator) {
+//				case "+":
+//					value = left + right;
+//					break;
+//				case "-":
+//					value = left - right;
+//					break;
+//				case "*":
+//					value = left * right;
+//					break;
+//				case "/":
+//					value = left / right;
+//					break;
+//				case "%":
+//					value = left % right;
+//					break;
+//				}
+//				String s = Double.toString(value);
+//				if (s.endsWith(".0")) s = Util.jsSubstring(s, 0, s.length()-2);
+//				result.add(s);
+//			}
+//			catch (Throwable t) {
+//				throw new SyntaxException("Invalid numeric value in _eval() expression '"+expr+"'.", stmt);
+//			}
+			break;
+		default:
+			throw new SyntaxException("Build-in function named '"+funcName+"' is not recognized.", stmt);
+		}
+		
+		return result;
+	}
+	
+	/**
 	 * Given a macro name and list of argument specifications, return the evaluation of the
 	 * named macro with the given arg values. The arg values must be simple comma delimited literal text with no embedded
 	 * substitutions. MacroParm specs can be named arguments 'argname1=value1, argname2=value2' or positional 'value1, value2'.
@@ -432,8 +540,12 @@ public class Macro implements Constants {
 	 * @param evalText
 	 * @return
 	 */
-	public static List<String> evalMacroInvocation(String macroName, String[] args, Stmt stmt) throws Exception {
-	
+	public static List<String> evalMacroInvocation(String macroName, String[] args, String rawArgs, Stmt stmt) throws Exception {
+		
+		// Built in functions have the same syntax as macros but start with underscore
+		if (macroName.startsWith("_")) {
+			return evalBuiltInFunction(macroName, args, rawArgs, stmt);
+		}
 			
 		// Find macro to be evaluated
 		Macro m = FXCoreMPMain.macroMap.get(macroName);
@@ -494,6 +606,42 @@ public class Macro implements Constants {
 
 		// Invoke the macro to evaluate itself with the given arguments
 		return m.eval(argNameValueMap, null);
+	}
+
+//--------- Expression evaluator test	
+//	public static void main(String[] args) {
+//		Map<String,Object> m = new HashMap<>();
+//		m.put("X", "3");
+//		m.put("Y", "X+2");
+//		try {
+//			Expression expr = new Expression("Y+5", exprConfig);
+//			System.out.println(expr.withValues(m).evaluate().getStringValue()+"");
+//		}
+//		catch (Throwable t) {
+//			System.out.println("eval failed: "+t.getMessage());
+//		}
+//		
+//	}
+	
+	public static void main(String[] args) {
+		try {
+			Expression expr = new Expression("3");
+			System.out.println(expr.evaluate().getValue()+"");
+			expr = new Expression("512");
+			System.out.println(expr.evaluate().getValue()+"");
+			expr = new Expression("40");  // <--- "4E+1"
+			System.out.println(expr.evaluate().getValue()+"");
+			expr = new Expression("41");
+			System.out.println(expr.evaluate().getValue()+"");
+			expr = new Expression("57");
+			System.out.println(expr.evaluate().getValue()+"");
+			expr = new Expression("60");  // <-- "6E+1"
+			System.out.println(expr.evaluate().getValue()+"");
+		}
+		catch (Throwable t) {
+			System.out.println("eval failed: "+t.getMessage());
+		}
+		
 	}
 		
 }

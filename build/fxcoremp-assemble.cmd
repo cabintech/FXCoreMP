@@ -30,6 +30,13 @@ set filename=%~n1
 set outputdir=%sourcedir%%2
 set libdir=%3
 set asmoptions=%4 %5 %6 %7
+set asmoptions2=
+
+rem Hack to allow stop of current in-memory program (-ee) and run with new program (-re)
+if %4.==-eere. (
+	set asmoptions=-ee %5 %6 %7
+	set asmoptions2=-re %5 %6 %7
+)
 
 rem If the macro/TOON jar is not here, assume /jar or /bin subdir
 set jarfile="%mypath%FXCoreMP.jar"
@@ -110,6 +117,19 @@ if not %errorlevel% EQU 0 (
 	if %called%==yes exit /b 1
 	pause
 	exit /b 1
+)
+
+rem HACK: Run assembler again with alternate options
+if defined asmoptions2 (
+	echo -- Running Assembler (2^)
+	"%fxcoretools%\FXCoreCmdAsm.exe" %asmoptions2% "%outputdir%\%filename%.fxo"
+	if not %errorlevel% EQU 0 (
+		echo ERROR running FXCore assembler (2^)
+		color 4F
+		if %called%==yes exit /b 1
+		pause
+		exit /b 1
+	)
 )
 
 echo Assembly complete, no errors detected

@@ -228,7 +228,9 @@ public class FXCoreMPMain {
 						// Recursive call to process the #include'd file
 						includedFiles.add(incFileName);
 						File incFile = new File(sourceDir, incFileName);
+						writer.add(new Stmt(";--- BEGIN INCLUDE: "+incFileName, stmt.getLineNum(), stmt.getFileName()));
 						processFilePass1(incFile, writer, includedFiles);
+						writer.add(new Stmt(";--- END INCLUDE: "+incFileName, stmt.getLineNum(), stmt.getFileName()));
 					}
 					omitOutput = true; // Nothing to write for this input line, just continue with next line
 				}

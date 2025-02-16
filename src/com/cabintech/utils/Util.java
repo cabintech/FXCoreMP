@@ -44,7 +44,7 @@ public class Util {
 	}
 	
 	public static String[] split(String s, String regex, int maxParts) {
-		if (s.trim().length() == 0) return new String[0]; // Unlike String.split(), return zero elements on empty input
+		if (s==null || (s.trim().length() == 0)) return new String[0]; // Unlike String.split(), return zero elements on empty input
 		return s.split(regex, maxParts);
 		
 	}

@@ -19,9 +19,10 @@ r0 = in0	; cpy_cs (inferred)
 out1 = r5	; cpy_sc (inferred)
 r0 =flags	; cpy_cc (inferred)
 
-; Special assignment
+; Special assignments
 r0=[r5]     ; cpy_cmx  (inferred)
 r0.u = 2184 ; wrdld (inferred)
+acc32 = 0 ; xor (inferred, only valid for ACC32)
 
 ; Acc64 assignments
 r5 = ACC64.U	; rdacc64u 
@@ -176,36 +177,23 @@ mylabel1: acc32 = r1 xor r2 ; mylabel1: xor
 mylabel2:acc32=r3 xor r4    ; mylabel2: xor
 acc32 = r0 xor 8	; xori not: any label here
 
+; Expression evaluation
+.rn		myreg	r2
+.equ	base	3
+.equ	basex	base-1
+myreg.u = $_eval(basex+10) ; wrdld r2,12
 
-; Sample program
-.rn temp  r0
-.rn temp1 r1
-.rn scaleFactorMin r2
-.rn scaleFactorMax r3
-.rn scaleFactorRange r4
-.equ delayLen 512
-.mem delaymem0 delayLen
-.mem delaymem1 delayLen
+$macro DIVIDER_TABLE(baseMRNum, value) ++
+; Macro to create divider table starting at given MR number
+.mreg	mr$_eval(${baseMRNum}+0)	3/${value}
+.mreg	mr$_eval(${baseMRNum}+1)	6/${value}
+.mreg	mr$_eval(${baseMRNum}+2)	9/${value}
+.mreg	mr$_eval(${baseMRNum}+3)	12/${value}
+$endmacro
 
-acc32          = in0
-(delaymem0)    = acc32
-acc32          = in1
-(delaymem1)    = acc32
-temp           = pot0_smth 
-temp1.u        = delayLen
-acc32          = temp mult temp1
-scaleFactorMin = acc32
-temp           = pot1_smth
-temp1.u        = delayLen
-acc32          = temp mult temp1
-scaleFactorMax = acc32
-acc32          = scaleFactorMax subs scaleFactorMin
-if acc32 >=0 goto save_range
-temp           = scaleFactorMax
-scaleFactorMax = scaleFactorMin
-scaleFactorMin = temp 
-acc32          = abs acc32
-save_range: 
-scaleFactorRange = acc32
+.equ	DIV32_TABLE_BASE		40	; MR of first entry of 32/x table
+$DIVIDER_TABLE(DIV32_TABLE_BASE, 32)
 
+.equ	DIV48_TABLE_BASE	50		; MR of first entry of 48/x table
+$DIVIDER_TABLE(DIV48_TABLE_BASE, 48)
 

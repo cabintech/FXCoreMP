@@ -10,7 +10,7 @@
 .macro.arg.subst { color: rgb(0, 0, 0); font-style: italic; } /*text-decoration: underline; font-style: italic; }*/
 .macro.invocation { color: rgb(0, 0, 192); font-style: italic;}
 .string { color: rgb(42, 0, 255); }
-.comment { color: rgb(0, 170, 0); }
+.comment { color: rgb(0, 130, 0); }
 .label {text-decoration: underline red; } 
 
 .editor { background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); }

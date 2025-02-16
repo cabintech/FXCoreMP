@@ -641,6 +641,15 @@ public class Toon {
 				if (!left.isModified() && !left.isIndirect() && !right.isModified() && right.isDMIndirect()) {
 					opCode = "rddel";
 				}
+				// Special case of assigning zero to ACC32 "acc32 = 0"
+				if (right.getText().equals("0")) {
+					if (!left.isAcc32()) {
+						throw new SyntaxException("Assigment of zero is supported only for ACC32.", stmt);
+					}
+					// Generate "xor acc32,acc32"
+					opCode = "xor";
+					right = left; // Both are ACC32
+				}
 				if (opCode == null) throw new SyntaxException("Invalid NonRegister-to-CR assigment statement.", stmt);
 				return rebuildStatement(opCode + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 			}

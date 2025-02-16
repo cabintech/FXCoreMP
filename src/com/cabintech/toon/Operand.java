@@ -33,6 +33,7 @@ public class Operand {
 
 	public Operand(String text, Map<String,String> rnMap) {
 		// Examine the text and determine any special operand syntax
+		this.text = text; // Preserve original text as-is
 		opText = text.toUpperCase(); // By default, operand is the original text
 
 		// Delay memory indirect "(x)"
