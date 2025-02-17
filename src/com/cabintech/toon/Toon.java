@@ -178,19 +178,21 @@ public class Toon {
 			"machd"	// Inferred
 			);
 	
-	// Map of allowed conditional expressions for IF statements into target FXCore branch mnemonics.
+	// Map of allowed conditional expression operators for IF statements into target FXCore branch mnemonics.
 	private Map<String,String> CondJmpExpr = Map.ofEntries(
-			Map.entry("gez", "jgez"), 
+			Map.entry("=", "jz"),
 			Map.entry(">=", "jgez"),
-			Map.entry("jgez", "jgez"),
 			Map.entry("<", "jneg"),
+			Map.entry("!=", "jnz"), // Can be applied to "0" or "acc32.sign"
+			Map.entry("<>", "jnz"),
+			// As of 1.4.1 these are no longer documented as synonyms for the conditional
+			// comparison symbols, but keeping for compatibility for now
 			Map.entry("neg", "jneg"),
 			Map.entry("jneg", "jneg"),
-			Map.entry("!=", "jnz"),
-			Map.entry("<>", "jnz"),
+			Map.entry("jgez", "jgez"),
 			Map.entry("nz", "jnz"),
+			Map.entry("gez", "jgez"), 
 			Map.entry("jnz", "jnz"),
-			Map.entry("=", "jz"),
 			Map.entry("z", "jz"),
 			Map.entry("jz", "jz"),
 			Map.entry("!=acc32.sign", "jzc"),
