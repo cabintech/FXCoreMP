@@ -181,16 +181,16 @@ public class Toon {
 	// Map of allowed conditional expressions for IF statements into target FXCore branch mnemonics.
 	private Map<String,String> CondJmpExpr = Map.ofEntries(
 			Map.entry("gez", "jgez"), 
-			Map.entry(">=0", "jgez"),
+			Map.entry(">=", "jgez"),
 			Map.entry("jgez", "jgez"),
-			Map.entry("<0", "jneg"),
+			Map.entry("<", "jneg"),
 			Map.entry("neg", "jneg"),
 			Map.entry("jneg", "jneg"),
-			Map.entry("!=0", "jnz"),
-			Map.entry("<>0", "jnz"),
+			Map.entry("!=", "jnz"),
+			Map.entry("<>", "jnz"),
 			Map.entry("nz", "jnz"),
 			Map.entry("jnz", "jnz"),
-			Map.entry("=0", "jz"),
+			Map.entry("=", "jz"),
 			Map.entry("z", "jz"),
 			Map.entry("jz", "jz"),
 			Map.entry("!=acc32.sign", "jzc"),
@@ -440,20 +440,38 @@ public class Toon {
 		
 		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.
 		if (tokenList[0].equalsIgnoreCase("if")) {
-			if (tokenCnt < 4) throw new SyntaxException("Invalid IF statement syntax, expected 4 tokens but found only "+tokenCnt+".", stmt);
+			if (tokenCnt < 4) throw new SyntaxException("Invalid IF statement syntax, expected at least 4 tokens but found only "+tokenCnt+".", stmt);
 			// 'IF <core-reg> <cond> <label>'
-			//TODO: For now the conditional expression must be space-separated, cannot write 'if r6>=0'
 			
-			String cond = CondJmpExpr.get(tokenList[2].toLowerCase());
-			if (cond == null) throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
+			//TODO: Write proper lexical tokenizer, this works on all valid conditions but fails to
+			// flag some invalid ones like "if r6 <=0 0 goto xxx" and cannot parse a single token
+			// like "if r6<0 goto xxx"
+			
+			// See if the condition is a single token we recognize. Note right side can only be "0".
+			String condToken = tokenList[2].toLowerCase();
+			if (condToken.endsWith("0")) condToken = Util.jsSubstring(condToken, 0, condToken.length()-1); // Remove any trailing 0 char, like "<=0"
+			
+			String cond = CondJmpExpr.get(condToken); // Lookup the condition token
+			if (cond == null) {
+				throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
+			}
+			
+			// If next symbol is "0", ignore it
+			int labelIndex = 3;  // Index of GOTO label
+			if (tokenList[labelIndex].equals("0")) { // Skip over "0" if present, e.g. "acc32 >= 0 goto xxx"
+				labelIndex++;
+			}
+			else if (tokenList[labelIndex].equals("acc32.sign")) { // Skip over "acc32.sign" if present, e.g. "r0 != acc32.sign goto xxx"
+				labelIndex++;
+				cond = "jzc"; // Different opcode
+			} 
 			
 			Operand target = new Operand(tokenList[1], rnMap);
 			if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR.", stmt);
 			
 			// Skip optional 'goto' token
-			int labelIndex = 3;  // If no GOTO token
-			if (tokenList[3].equalsIgnoreCase("goto")) {
-				labelIndex = 4; // Label is next token after GOTO
+			if (tokenList[labelIndex].equalsIgnoreCase("goto")) {
+				labelIndex++; // Label is next token after GOTO
 			}
 			
 			// Generate FXCore assembler format (use original symbol, if any, for the register) for readability of the generated code
