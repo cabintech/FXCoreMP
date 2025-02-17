@@ -127,24 +127,12 @@ acc64 += 0.2 machd (100)	; machid (inferred)
 
 
 ; Branching
-IF r0 >=0 GOTO target_label 	; jgez
-IF r0 <0 GOTO target_label 		; jneg
-IF r0 !=0 goto target_label		; jnz
-IF r0 <>0 goto target_label		; jnz
-if r0 =0 goto target_label		; jz
-if r0 !=acc32.sign target_label	; jzc
-
-IF r0 gez GOTO target_label 	; jgez
-IF r0 neg goto target_label		; jneg
-IF r0 nz goto target_label		; jnz
-if r0 z goto target_label		; jz
-
-if r0 >= 0 target_label					; jgez
-if r0 != 0 goto target_label			; jnz
-if r0 = 0 target_label					; jz
-if r0 !=acc32.sign target_label			; jzc
-if r0 != acc32.sign goto target_label 	; jzc
-
+IF r0 >= 0 GOTO target_label 	; jgez
+IF r0 < 0 GOTO target_label 	; jneg
+IF r0 != 0 goto target_label	; jnz
+IF r0 <> 0 target_label			; jnz
+if r0 = 0 goto target_label		; jz
+if r0 != acc32.sign target_label; jzc
 
 GOTO target_label				; jmp
 jmp target_label				; jmp
