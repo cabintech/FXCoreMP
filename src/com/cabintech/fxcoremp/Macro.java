@@ -1,12 +1,78 @@
 package com.cabintech.fxcoremp;
 
-import java.math.BigDecimal;
-
 /**
  * @author Mark McMillan
  * Copyright (c) Cabintech Global LLC
+ *
+ * TODO: Idea 1 -------------------------------------------------------------------------
+ * Support separation of macro inputs and outputs into an assignment, e.g.
+ * $macro ABC(in1<=, in2<=, out1=>, out2=>) ++
+ *  ...
+ * $endmacro
  * 
- * Represents a macro definition create with the $macro statement.
+ * Support this syntax:
+ * (out1, out2) = $ABC(in1, in2)
+ * 
+ * this looks like a mutil-return value function call. Might need to constrain macro definition
+ *  - must use in/out designations (maybe this becomes reqmt on all macro definitions)
+ *  - maybe require grouping ins and outs
+ * 
+ * syntax needs to be distinct enough to be easily recognized
+ * 
+ * this is more high-level language like
+ * 
+ * note this is just syntatic sugar, still inputs and outputs are declared but not verified
+ * 
+ * TODO: Idea 2 ---------------------------------------------------------------------------
+ * Remove requirement for "++" on multiline macro definitions. Problem is line-by-line gathering
+ * uses them to gather all the lines of a macro which are passed as a list to Macro ctor. So
+ * higher level code needs to properly distinguish:
+ * 
+ * Multiline macros:
+ * 
+$macro ABC
+line 1
+line 2
+$endmacro
+
+$macro ABC()
+line 1
+line 2
+$endmacro
+
+$macro ABC(x)
+line 1
+line 2
+$endmacro
+ * 
+ * and single line macros:
+ * 
+$macro ABC text1
+
+$macro ABC (text1)
+
+$macro ABC(x) text1((${x}))
+ * 
+ * TODO: Idea 3 ---------------------------------------------------------------------------
+ * Allow multiline macro invocations (or any assembler code) for better readability, e.g. instead of:
+ * 
+ * $CALC_DIV_TT(rawTTMR<=tapTimeRaw, divTableBase<=DIV_BASE_1, divTT=>tapTime, divIndex=>tapDivIndex)
+ * 
+ * write:
+ * 
+ * $CALC_DIV_TT( +
+ * 		rawTTMR<=tapTimeRaw, + 
+ * 		divTableBase<=DIV_BASE_1, + 
+ * 		divTT=>tapTime, +
+ * 		divIndex=>tapDivIndex)
+ * 
+ * Maybe allow this in basic assembler statements? Not sure it is useful for that.
+ * Note need to distinguish "++" used to indicate multi-line macros
+ * 
+ * 
+ * -----------------------------------------------------------------------------------------------------
+ * 
+ * This class represents a macro definition create with the $macro statement.
  * 
  * Syntax 1 (simple): $macro macro-name substitution-text
  * This form of a macro does a simple literal text substitution into the source.
@@ -57,6 +123,8 @@ import java.math.BigDecimal;
  * TODO: Could allow $include in a macro defn, but requires handling in the macro expander.
  */
 
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

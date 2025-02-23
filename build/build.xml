@@ -19,6 +19,7 @@
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset dir="bin"/>
+        	<zipgroupfileset dir="../lib" includes="*.jar"/>
         </jar>
     </target>
 </project>
