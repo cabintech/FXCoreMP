@@ -55,7 +55,7 @@ public class Stmt {
 			if (j>0) {
 				// and ends on this line, so just remove it
 				cmnt = Util.jsSubstring(text, i, j+2);
-				text = Util.jsSubstring(text, 0, i) + Util.jsSubstring(fullText, j+2); 
+				text = Util.jsSubstring(text, 0, i) + Util.jsSubstring(fullText, j+3); 
 			}
 			else {
 				// and ends on some future line. Remove all to the right of it and flag this as start of a block comment
