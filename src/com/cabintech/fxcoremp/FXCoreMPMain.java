@@ -149,7 +149,9 @@ public class FXCoreMPMain {
 			boolean inIf = false;
 			boolean ifCondition = false;
 			Stmt blockCommentStartStmt = null; // Statement that started a block comment
+//			Stmt multilineStartStmt = null;    // Statement that started a block comment
 			List<Stmt> macroLines = new ArrayList<Stmt>();
+			List<Stmt> multiLines = new ArrayList<Stmt>();
 			for (String inLine: srcLines) {
 				boolean omitOutput = false; // Do not write the current statement to the output stream
 				lineNum++;
@@ -165,6 +167,11 @@ public class FXCoreMPMain {
 					// Do nothing, just output as usual below.
 					stmt.setIgnore(true); 
 				}
+//				
+//				else if (multilineStartStmt != null) {
+//					multilineStartStmt.append(stmt.getText());
+//					stmt.setIgnore(true);
+//				}
 				
 				else if (inDefine && stmtText.startsWith("$endmacro")) {
 					Macro m = new Macro(macroLines);
@@ -182,6 +189,11 @@ public class FXCoreMPMain {
 				else if (inDefine) {
 					macroLines.add(stmt);
 					omitOutput = true; // Nothing to output for a macro definition
+				}
+				
+				else if (stmt.isContinued()) {
+					multiLines.add(stmt);
+					omitOutput = true; // Nothing to output until end of multiline
 				}
 				
 				else if (stmtText.startsWith("$endif")) { // End of a $if condition
@@ -277,6 +289,25 @@ public class FXCoreMPMain {
 				//-----------------------------------------
 				// Output the current line
 				//-----------------------------------------
+				if (!stmt.isContinued() && multiLines.size() > 0) {
+					// end of continued (multiline) stmt
+					multiLines.add(stmt);
+					String mergedText = "";
+					for (Stmt s: multiLines) {
+						mergedText = mergedText + s.getText() + " ";
+					}
+					
+					// Update the first line of the continued set with the merged statement text
+					Stmt line1 = multiLines.get(0);
+					line1.replaceText(mergedText);
+					
+					// Replace the current statement with the merged (line1)
+					stmt = line1;
+					
+					// Reset multiline buffer
+					multiLines.clear();
+				}
+				
 				
 				// If this line ends a block comment, output the comment ender and then process (output)
 				// the rest of this line normally.

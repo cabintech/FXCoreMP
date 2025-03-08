@@ -21,6 +21,7 @@ public class Stmt {
 	private String fileName;
 	private boolean isBlockCommentStart = false;
 	private boolean isBlockCommentEnd = false;
+	private boolean isContinued = false;
 	private boolean ignore = false; // Ignore this statement for any processing purposes
 	
 	public Stmt(String line, int lineNum, String fileName) {
@@ -103,6 +104,20 @@ public class Stmt {
 				text = Util.jsSubstring(text, labIndex+1).trim(); // Remainder is the statement
 			}
 		}
+		
+		if (text.endsWith("+") && !text.endsWith("++")) {
+			text = Util.jsSubstring(text, 0, text.length()-1); // Remove it
+			isContinued = true;
+		}
+	}
+	
+	/**
+	 * Returns true IFF the statement ends with a statement-continuation character (which
+	 * has been removed from the statement text).
+	 * @return
+	 */
+	public boolean isContinued() {
+		return isContinued;
 	}
 	
 	/**
@@ -162,6 +177,19 @@ public class Stmt {
 	public void removeComment() {
 		cmnt = "";
 		fullText = text;
+	}
+	
+	/**
+	 * Replaces the text of this statement. The supplied string is not parsed for
+	 * comments or any other information, this just replaces the non-comment,
+	 * non-label part of this statement. The full text (getFullText()) is 
+	 * reconstructed with the supplied string.
+	 * @param newText
+	 */
+	public void replaceText(String newText) {
+		text = newText;
+		// Rebuild the full source text
+		fullText = (label.length()>0?label+": ":"") + newText + (cmnt.length()>0?" ; "+cmnt:"");
 	}
 	
 	@Override
