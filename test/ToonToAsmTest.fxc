@@ -178,7 +178,7 @@ acc32 = r0 xor 8	; xori not: any label here
 .equ	basex	base-1
 myreg.u = $_eval(basex+10) ; wrdld r2,12
 
-$macro DIVIDER_TABLE(baseMRNum, value) ++
+$macro DIVIDER_TABLE(baseMRNum<=, value<=) ++
 ; Macro to create divider table starting at given MR number
 .mreg	mr$_eval(${baseMRNum}+0)	3/${value}
 .mreg	mr$_eval(${baseMRNum}+1)	6/${value}
@@ -187,8 +187,13 @@ $macro DIVIDER_TABLE(baseMRNum, value) ++
 $endmacro
 
 .equ	DIV32_TABLE_BASE		40	; MR of first entry of 32/x table
-$DIVIDER_TABLE(DIV32_TABLE_BASE, 32)
+
+; Showing use of macro direction indicators with positional arguments and line continuation
+$DIVIDER_TABLE(	<= DIV32_TABLE_BASE, +	; Base MR address of first entry
+				<= 32)					; divider value
 
 .equ	DIV48_TABLE_BASE	50		; MR of first entry of 48/x table
+
+; Showing positional macro args without director indicators
 $DIVIDER_TABLE(DIV48_TABLE_BASE, 48)
 

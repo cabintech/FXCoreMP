@@ -632,13 +632,38 @@ public class Macro implements Constants {
 		int numPosArgs = 0;
 		int numNamArgs = 0;
 		for (int argNum=0; argNum<args.length; argNum++) {
-			String argText = args[argNum];
+			String argText = args[argNum].trim();
 			// Support named and positional args. All args must be one or the other but not mixed.
-			if (argText.indexOf('=') < 0) {
-				// No equal signs in the arg, so assume positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
+			if ((argText.indexOf('=') < 0) ||
+					argText.startsWith("<=>") ||
+					argText.startsWith("<=") ||
+					argText.startsWith("=>") ||
+					argText.startsWith("=")
+				) 
+				{
+				// No equal sign or arg starts with a direction indicator, so this is positional MACRO(value0, value1, ...) match each arg, in order, to macro definition arg names
 				if (numNamArgs > 0) throw new SyntaxException("The form of the '"+macroName+"' macro arguments appear have both named an positional styles which is not allowed.", stmt);
-				String argName = m.getArgNames().get(argNum).getString();		// Name from macro definition
-				argNameValueMap.put(argName, new MacroParm(argText.trim(), DIR_ANY));	// Value is the argument text, positional args are always DIR_ANY
+				String defName = m.getArgNames().get(argNum).getString();		// Name from macro definition
+				int defDir = m.getArgNames().get(argNum).getDirection();
+				int argDir = DIR_ANY;
+				if (argText.startsWith("<=>")) {
+					argDir = DIR_INOUT;
+					argText = Util.jsSubstring(argText, 3);
+				} else if (argText.startsWith("<=")) {
+					argDir = DIR_IN;
+					argText = Util.jsSubstring(argText, 2);
+				} else if (argText.startsWith("=>")) {
+					argDir = DIR_OUT;
+					argText = Util.jsSubstring(argText, 2);
+				} else if (argText.startsWith("=")) {
+					argDir = DIR_ANY;
+					argText = Util.jsSubstring(argText, 1);
+				}
+				// If macro defn and invocation arg have direction indicators, make sure they match
+				if ((argDir!=DIR_ANY) && (defDir!=DIR_ANY) && (argDir != defDir)) 
+					throw new SyntaxException("Direction indicator of '"+argText.trim()+"' does not match '"+defName+"' argument of '"+macroName+"' macro definition.", stmt);
+				
+				argNameValueMap.put(defName, new MacroParm(argText.trim(), argDir));	// Value is the argument text, positional args are always DIR_ANY
 			}
 			else {
 				// Named argument of the form 'argname=argvalue'.
