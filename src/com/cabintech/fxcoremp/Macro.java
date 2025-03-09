@@ -191,18 +191,35 @@ public class Macro implements Constants {
 					// Extract comma separated list of arg names
 					String names[] = argNameList.split(",");
 					for (String name: names) {
+						// Check if arg name has direction indicator (prefix or postfix is allowed)
+						name = name.trim();
 						int dir = DIR_ANY;
-						if (name.endsWith("<=>")) {
-							name = Util.jsSubstring(name, 0, name.length()-3);
+						if (name.endsWith(DIR_INOUT_TEXT) || name.startsWith(DIR_INOUT_TEXT)) {
 							dir = DIR_INOUT;
+							if (name.endsWith(DIR_INOUT_TEXT)) {
+								name = Util.jsSubstring(name, 0, name.length()-3);
+							}
+							else {
+								name = Util.jsSubstring(name, 3);
+							}
 						}
-						else if (name.endsWith("<=")) {
-							name = Util.jsSubstring(name, 0, name.length()-2);
+						else if (name.endsWith(DIR_IN_TEXT) || name.startsWith(DIR_IN_TEXT)) {
 							dir = DIR_IN;
+							if (name.endsWith(DIR_IN_TEXT)) {
+								name = Util.jsSubstring(name, 0, name.length()-2);
+							}
+							else {
+								name = Util.jsSubstring(name, 2);
+							}
 						}
-						else if (name.endsWith("=>")) {
-							name = Util.jsSubstring(name, 0, name.length()-2);
+						else if (name.endsWith(DIR_OUT_TEXT) || name.startsWith(DIR_OUT_TEXT)) {
 							dir = DIR_OUT;
+							if (name.endsWith(DIR_OUT_TEXT)) {
+								name = Util.jsSubstring(name, 0, name.length()-2);
+							}
+							else {
+								name = Util.jsSubstring(name, 2);
+							}
 						}
 						//System.out.println("Macro defn: "+name+" direction "+dir);
 						argNames.add(new MacroParm(name.trim(), dir));
