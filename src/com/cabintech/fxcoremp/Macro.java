@@ -367,7 +367,7 @@ public class Macro implements Constants {
 			if (j > i) {
 				argName = Util.jsSubstring(text, i+2, j);
 			}
-			throw new SyntaxException("Macro argument named '"+argName+"' is used but does not appears in the macro argument list.", stmt);
+			throw new SyntaxException("Macro argument named '"+argName+"' is used but does not appear in the macro argument list.", stmt);
 		}
 		
 		return text;
