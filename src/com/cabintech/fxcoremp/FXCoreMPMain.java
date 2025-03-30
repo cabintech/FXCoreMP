@@ -480,6 +480,7 @@ public class FXCoreMPMain {
 			if (doToon) {
 				int lineCnt = 0;
 				List<String> toonOutput = new ArrayList<>();
+				boolean inBlockComment = false;
 				for (String s: outSource) {
 					lineCnt++;
 					// Translate TOON (target-of-operation notation) which is not understood by the rest of the tool chain. We
@@ -488,7 +489,13 @@ public class FXCoreMPMain {
 						if (toonModeNormal) {
 							// Create a Stmt so any errors can have context (e.g. line number, etc)
 							Stmt stmt = new Stmt(s, lineCnt, srcFile.getAbsolutePath());
-							s = tooner.toonToAsm(stmt);
+							if (stmt.isBlockCommentEnd()) {
+								inBlockComment = false;
+							}
+							s = inBlockComment ? "; "+s : tooner.toonToAsm(stmt);
+							if (stmt.isBlockCommentStart()) {
+								inBlockComment = true;
+							}
 						} else {
 							s = tooner.asmToToon(s);
 						}
