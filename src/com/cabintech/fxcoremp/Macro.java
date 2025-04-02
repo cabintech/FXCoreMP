@@ -247,7 +247,7 @@ public class Macro implements Constants {
 			Stmt s = defStmts.get(i);
 			String line = s.getText();
 			if (line.startsWith("$macro ")) {
-				throw new SyntaxException("Nested macro definition (maybe missing $endmacro before this?)", s);
+				throw new SyntaxException("Nested macro definition not allowed (maybe missing $endmacro before this?)", s);
 			}
 			if (line.startsWith("$include ")) {
 				throw new SyntaxException("Include not allowed in macro definition.", s);
@@ -385,12 +385,38 @@ public class Macro implements Constants {
 	public static List<String> doMacroEval(List<Stmt> sourceLines) throws Exception {
 		
 		List<String> expanded = new ArrayList<>(); // Expanded macro lines output of this method
+		List<Stmt> multiLines = new ArrayList<Stmt>();
+
 		for (Stmt stmt: sourceLines) {
 			
 			if (stmt.isIgnore()) {
 				// Do not process this line (part of a block comment), just copy it to the output
 				expanded.add(stmt.getFullText());
 				continue;
+			}
+			
+			if (stmt.isContinued()) {
+				multiLines.add(stmt);
+				continue;
+			}
+			
+			if (!stmt.isContinued() && multiLines.size() > 0) {
+				// List line of multiline, collapse them all into one
+				multiLines.add(stmt);
+				String mergedText = "";
+				for (Stmt s: multiLines) {
+					mergedText = mergedText + s.getText() + " ";
+				}
+				
+				// Update the first line of the continued set with the merged statement text
+				Stmt line1 = multiLines.get(0);
+				line1.replaceText(mergedText);
+				
+				// Replace the current statement with the merged (line1)
+				stmt = line1;
+				
+				// Reset multiline buffer
+				multiLines.clear();
 			}
 			
 			// Macro form: $mac-name<white-space> or $mac-name() or $mac-name(args)

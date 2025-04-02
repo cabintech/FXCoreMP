@@ -38,6 +38,14 @@ import com.cabintech.utils.Util;
  * @author Mark McMillan
  */
 
+//TODO: Unknown on left side of assignment produces an unhelpful error message:
+//   .rn myName r0
+//
+//   typoInMyName = r6
+//
+//   "Invalid CR-to-NonRegister assigment statement."
+//   If possible, note that the left operate is not recognized as a helpful hint.
+
 public class Toon {
 	
 	/**
@@ -680,7 +688,7 @@ public class Toon {
 				if (!left.isModified() && left.isDMIndirect() && !right.isModified() && !right.isIndirect()) {
 					return rebuildStatement("wrdel" + SEP1 + left.getOpText() + "," + right.getOpText(), stmt, tokenList, 3);
 				}
-				throw new SyntaxException("Invalid CR-to-NonRegister assigment statement.", stmt);
+				throw new SyntaxException("Invalid CR-to-NonRegister assignment statement.", stmt);
 			}
 			
 			// If none of the above, we don't recognize this assignment statement
