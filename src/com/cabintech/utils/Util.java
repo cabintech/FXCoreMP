@@ -55,7 +55,7 @@ public class Util {
 	 * @return
 	 */
 	public static String[] split(String s, String regex) {
-		return split(s, regex, 0);
+		return split(s, regex, -1);
 	}
 	
 	public static void info(String info) {
@@ -64,7 +64,7 @@ public class Util {
 		}
 	}
 
-	public static void debu(String info) {
+	public static void debug(String info) {
 		if (FXCoreMPMain.verbose.equals("debug")) {
 			System.out.println(info);
 		}

@@ -197,3 +197,39 @@ $DIVIDER_TABLE(	<= DIV32_TABLE_BASE, +	; Base MR address of first entry
 ; Showing positional macro args without director indicators
 $DIVIDER_TABLE(DIV48_TABLE_BASE, 48)
 
+; Test argument omission
+$macro argTest(a, b, c) ++
+; do something
+$endmacro
+
+$argTest(1, 2,)
+
+
+;---------------------------------
+; _count built in function
+;---------------------------------
+
+; -- ADD
+.equ	some_symbola $_count(myname, add, 1) 	; Should be 0
+.equ	some_symbolb $_count(myname, add, 1) 	; Should be 1
+.equ	some_symbolc $_count(myname, add, 1) 	; Should be 2
+.equ	some_symbold $_count(myname, add, -1) 	; Should be 3
+.equ	some_symbole $_count(myname, add, 5) 	; Should be 2
+
+; -- GET
+.equ	some_symbol6a $_count(myname, get)		; Should be 7
+
+; -- SET
+$_count(myname, set, 37)						; Macro evaluates to empty string (set operation)
+.equ	some_symbol37 $_count(myname, get)		; Should be 37
+
+; -- Decimals
+$_count(myname, set, 12.3)						; Empty (SET operation)
+$_count(myname, inc, 0.2); Empyt (INC operation)
+.equ	some_symbol_125 $_count(myname, get,)	; Should be 12.5
+
+;-----------------------------------
+; _log built in function
+;-----------------------------------
+
+$_log(The value of the 'myname' counter expected to be 12.5, the actional value is $_count(myname,get,)) ; No source generated for _log() macro

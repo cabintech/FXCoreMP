@@ -3,6 +3,21 @@ package com.cabintech.fxcoremp;
 /**
  * @author Mark McMillan
  * Copyright (c) Cabintech Global LLC
+ * 
+ * TODO: BUG: This source line:
+ * $_log(after: $_count(nextmr,get,))
+ * fools the processor which sees it as a label, not a macro invocation.
+ * 
+ * TODO: BUG: Comments in multiline macro definitions attempt substitution, e.g.
+ * $macro XXX(abd, def) ++
+ * ; This causes an error but should not, this comment should be ignored: ${NoSuchAArg}
+ * $endmacro
+ * 
+ * TODO: For counters, $_count(mycounter,add,xxx) allow xxx to be an expression, not just a numeric literal, e.g.
+ * .equ V 12
+ * $_count(mycounter,add,V-1)
+ * 
+ * e.g. implement as of $_count(mycounter,add,$_eval(xxx))
  *
  * TODO: Idea 1 -------------------------------------------------------------------------
  * Support separation of macro inputs and outputs into an assignment, e.g.
@@ -27,6 +42,13 @@ package com.cabintech.fxcoremp;
  * Remove requirement for "++" on multiline macro definitions. Problem is line-by-line gathering
  * uses them to gather all the lines of a macro which are passed as a list to Macro ctor. So
  * higher level code needs to properly distinguish:
+ * 
+ * TODO: Idea 3 ----------------------------------------------------------------------------
+ * Allow macro args to be omitted without using extra ",". So a simple macro with two args
+ * $macro XYZ(a, b) ...
+ * could be invoked with 2, 1, or zero args. Of course the macro has to be able to handle that.
+ * Macro defn would have to explicity allow this, something like
+ * $macro XYZ:varargs(a, b)
  * 
  * Multiline macros:
  * 
@@ -143,6 +165,7 @@ public class Macro implements Constants {
 	private List<MacroParm> argNames = new ArrayList<>();				// List of argument name/direction
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
 	static private Map<String, Object> equMap = new HashMap<>();		// Map of symbols and expressions created by .equ statements
+	static private Map<String, Number> counterMap = new HashMap<>();	// Map of counter names to current values
 	private String sourceFile = null;
 	private static ExpressionConfiguration exprConfig = ExpressionConfiguration.builder().decimalPlacesRounding(12).build();
 	
@@ -162,10 +185,20 @@ public class Macro implements Constants {
 			line1 = Util.jsSubstring(line1, 0, line1.length()-3).trim(); // Remove multi-line continuation marker
 		}
 		line1 = line1.replaceAll("\t"," ").trim();
+		
+		// Find end of macro name
+		String padded = line1 + " ";
+		int afterName=0;
+		while (Character.isJavaIdentifierPart(padded.charAt(afterName))) {
+			afterName++;
+		}
+		
 		// Find open paren of arg list
-		int paren1 = line1.indexOf('(');
-		int paren2 = line1.indexOf(')');
-		if (paren1 < 0) {
+		//int blank = line1.indexOf(' ');
+		//int paren1 = line1.indexOf('(');
+		//int paren2 = line1.indexOf(')');
+		//if (paren1 < 0) {
+		if (padded.charAt(afterName) != '(') {
 			// No opening paren, presume no args and remaining text is macro text
 			int i = line1.indexOf(' ');
 			if (i < 0) {
@@ -180,6 +213,8 @@ public class Macro implements Constants {
 		}
 		else {
 			// Macro has arg list
+			int paren1 = line1.indexOf('(');
+			int paren2 = line1.indexOf(')');
 			if (paren2 < 1 || paren1 > paren2) {
 				throw new SyntaxException("Invalid macro definition, missing or invalid argument list.", stmt1);
 			}
@@ -234,7 +269,8 @@ public class Macro implements Constants {
 		}
 		
 		// Enforce macro names so we can reliably parse them in source lines
-		if (macroName.contains("$")) throw new SyntaxException("Macro name cannot contain '$' symbol.", stmt1);
+		if (macroName.contains("$")) 
+			throw new SyntaxException("Macro name cannot contain '$' symbol.", stmt1);
 		for (int i=0; i<macroName.length(); i++) {
 			char c = macroName.charAt(i);
 			if (!Character.isJavaIdentifierPart(c)) throw new SyntaxException("Macro name contains invalid character '"+c+"'.", stmt1);
@@ -322,7 +358,10 @@ public class Macro implements Constants {
 		// Do argument substitution on each line of the macro defn
 		List<Stmt> genCode = new ArrayList<Stmt>();
 		for (Stmt s: macroLines) {
-			String substText = doArgSubst(s.getFullText(), treeMap, s);
+			//TODO: Should only do substitution in statement text, not comments, but using s.getText() here
+			// breaks multiline invocations inside a macro definition (WHY?). As is, if a ${...} is in a comment
+			// it tries to do the substitution and if it fails flags a syntax error (which is wrong).
+			String substText = doArgSubst(s.getFullText(), treeMap, s); 
 			Stmt substStmt = new Stmt(substText, s.getLineNum(), s.getFileName());
 			genCode.add(substStmt);
 		}
@@ -465,7 +504,7 @@ public class Macro implements Constants {
 					// The macro invocation has an arg list. Since we are evaluating macros inside-out, the arg
 					// list has no macros in it, just literal text.
 					rawArgs = extractArgList(text, nameEnd);
-					if (rawArgs == null) throw new SyntaxException("Invalid macro argument list '"+text+"'.", stmt);
+					if (rawArgs == null) throw new SyntaxException("Invalid macro argument list, missing closing paren: '"+text+"'.", stmt);
 					args = Util.split(rawArgs, ",");
 					end = nameEnd + rawArgs.length() + 2; // start + name + args + parens + $ char
 				}
@@ -484,7 +523,7 @@ public class Macro implements Constants {
 				}
 				else if (macExpanded.size() == 1) {
 					text = Util.jsSubstring(text, 0, start) + macExpanded.get(0) + Util.jsSubstring(text, end); // Single string result replaced macro invocation
-					if (stmt.getComment().length() > 0) text = text + " " + stmt.getComment();
+					//if (stmt.getComment().length() > 0) text = text + " " + stmt.getComment();
 				}
 				else {
 					// Any multi-line expansion replaces the source line without any farther nested expansion
@@ -584,6 +623,60 @@ public class Macro implements Constants {
 		List<String> result = new ArrayList<>();
 		
 		switch (funcName.toLowerCase()) {
+		case "_log":
+			// Syntax: $_log(arg1,arg2,...), result (evaluation) is always empty
+			// Note an macros in the args have already been expanded, so they are just simple strings
+			// We treat all the args as a single output. The parser has broken them into seperate args[]
+			// elements if there were any commas. We output a single re-constructed string that includes
+			// those commas, so from a users point of view it is a single argument.
+			System.out.println("Log macro: "+String.join(",", args));
+			break;
+		case "_count":
+			// Syntax: $_count(name, [add,set,get], value)
+			
+			if (args.length < 2) throw new SyntaxException("Expected 2 or 3 arguments for _count() built-in macro but found only "+args.length+".", stmt);
+			String counterName = args[0].trim().toLowerCase();
+			String operation = args[1].trim().toLowerCase();
+			String parameter = "0";
+			if (!operation.equals("get")) { // GET does not require 3rd arg, all others do
+				if (args.length < 3) throw new SyntaxException("Expected 3rd argument for _count() built-in macro but found only "+args.length+".", stmt);
+				parameter = args[2].trim();
+			}
+			if (!counterMap.containsKey(counterName)) { // New counter never seen before, create and init a new one
+				counterMap.put(counterName, Integer.valueOf(0));
+			}
+			
+			Number currentValue = counterMap.get(counterName);
+			Number parmValue = null; 
+			if (parameter.indexOf('.') < 0) // Haha, cannot use ternary "?" operator for this, see https://stackoverflow.com/questions/25230171/unexpected-type-resulting-from-the-ternary-operator
+				parmValue = Integer.decode(parameter);
+			else 
+				parmValue = Double.valueOf(parameter);
+			
+			switch (operation) {
+			case "add":
+				result.add(currentValue.toString()); // Only diff with INC is that ADD returns the current value (before adding, e.g. postfix behavior)
+			case "inc":
+				if ((currentValue instanceof Integer) && (parmValue instanceof Integer)) { // Integer add
+					currentValue = currentValue.intValue() + parmValue.intValue();
+				} else {
+					currentValue = currentValue.doubleValue() + parmValue.doubleValue(); // Floating point add
+				}
+				counterMap.put(counterName, currentValue);
+				break;
+			case "set":
+				// Set counter to specified value, no result
+				counterMap.put(counterName, parmValue);
+				break;
+			case "get":
+				// Just return current value
+				result.add(currentValue.toString());
+				break;
+			default:
+				throw new SyntaxException("Count operation '"+operation+"' is not recognized, must be one of GET,SET,ADD,INC.", stmt);
+			}
+			break; // _count
+			
 		case "_eval":
 			//if (args.length != 1) {
 			//	throw new SyntaxException("Expected 1 arg for _eval() function, found "+args.length+" args.", stmt);
@@ -635,7 +728,8 @@ public class Macro implements Constants {
 //			catch (Throwable t) {
 //				throw new SyntaxException("Invalid numeric value in _eval() expression '"+expr+"'.", stmt);
 //			}
-			break;
+			break; // _eval
+			
 		default:
 			throw new SyntaxException("Build-in function named '"+funcName+"' is not recognized.", stmt);
 		}
