@@ -173,28 +173,9 @@ public class FXCoreMPMain {
 //					stmt.setIgnore(true);
 //				}
 				
-				else if (inDefine && stmtText.startsWith("$endmacro")) {
-					Macro m = new Macro(macroLines);
-					String macroName = m.getName();
-					if (macroMap.containsKey(macroName)) {
-						throw new SyntaxException("Macro name '"+m.getName()+"' is already defined.", stmt);
-					}
-					macroMap.put(macroName, m);
-					inDefine = false;
-					macroLines.clear();
-					omitOutput = true; // Nothing to output for this line
-				}
-				
-				// Accumulating lines of a multi-line macro?
-				else if (inDefine) {
-					macroLines.add(stmt);
-					omitOutput = true; // Nothing to output for a macro definition
-				}
-				
-				else if (stmt.isContinued()) {
-					multiLines.add(stmt);
-					omitOutput = true; // Nothing to output until end of multiline
-				}
+				//-------------------------------------------------------------------
+				// IF processing, precludes all other except block comments
+				//-------------------------------------------------------------------
 				
 				else if (stmtText.startsWith("$endif")) { // End of a $if condition
 					inIf = false;
@@ -231,6 +212,7 @@ public class FXCoreMPMain {
 				//-----------------------------------------
 				// $include
 				//-----------------------------------------
+				
 				else if (stmtText.startsWith("$include ")) {
 					if (stmtText.length() < 10) {
 						throw new SyntaxException("Invalid $include statement, no file specified.", stmt);
@@ -247,9 +229,33 @@ public class FXCoreMPMain {
 					omitOutput = true; // Nothing to write for this input line, just continue with next line
 				}
 				
-				//-----------------------------------------
-				// $macro
-				//-----------------------------------------
+				//-------------------------------------------------------------------
+				// Macro definition processing
+				//-------------------------------------------------------------------
+				
+				else if (inDefine && stmtText.startsWith("$endmacro")) {
+					Macro m = new Macro(macroLines);
+					String macroName = m.getName();
+					if (macroMap.containsKey(macroName)) {
+						throw new SyntaxException("Macro name '"+m.getName()+"' is already defined.", stmt);
+					}
+					macroMap.put(macroName, m);
+					inDefine = false;
+					macroLines.clear();
+					omitOutput = true; // Nothing to output for this line
+				}
+				
+				// Accumulating lines of a multi-line macro?
+				else if (inDefine) {
+					macroLines.add(stmt);
+					omitOutput = true; // Nothing to output for a macro definition
+				}
+				
+				else if (stmt.isContinued()) {
+					multiLines.add(stmt);
+					omitOutput = true; // Nothing to output until end of multiline
+				}
+				
 				else if (stmtText.startsWith("$macro ")) { // Start of macro definition
 					if (stmtText.endsWith("++")) { 
 						// Start of multi-line macro definition
