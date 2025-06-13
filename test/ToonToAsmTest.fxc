@@ -228,8 +228,57 @@ $_count(myname, set, 12.3)						; Empty (SET operation)
 $_count(myname, inc, 0.2); Empyt (INC operation)
 .equ	some_symbol_125 $_count(myname, get,)	; Should be 12.5
 
+/*
+.mreg mr10 $_count(eighths, add, $_eval(1/8)) ; Table of 1/8's from 0 to 1
+.mreg mr11 $_count(eighths, add, $_eval(1/8))
+.mreg mr12 $_count(eighths, add, $_eval(1/8))
+.mreg mr13 $_count(eighths, add, $_eval(1/8))
+.mreg mr14 $_count(eighths, add, $_eval(1/8))
+.mreg mr15 $_count(eighths, add, $_eval(1/8))
+.mreg mr16 $_count(eighths, add, $_eval(1/8))
+.mreg mr17 $_count(eighths, add, $_eval(1/8))
+*/
+
+$macro nextMR(mrName<=, initValue<=) ++
+.equ	$_eval(if("${mrName}"!="","${mrName}_n","nextmr${:unique}_n"))	$_count(nextmr,get,)
+.rn		$_eval(if("${mrName}"!="","${mrName}","nextmr${:unique}"))	mr$_count(nextmr,add,1)
+$_eval(if("${initValue}"!="",".mreg $_eval(if("${mrName}"!="","${mrName}","nextmr${:unique}")) ${initValue}", ""))
+$endmacro
+
+$nextMR(slope, 0.7)
+$nextMR(deltax,)
+$nextMR(deltay,)
+
+$nextMR(eighthsTable, $_count(eighths, add, $_eval(1/8))) ; Lookup table of 1/8 constants from 0.0 to 1.0
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+$nextMR(, $_count(eighths, add, $_eval(1/8)))
+
+$nextMR(alias1, 0)
+$nextMR(alias2, 0)
+
+$nextMR(deltaTable, 0) ; Table of 12 uninitialized values
+$_count(nextmr, inc, 12); Move counter past the table
+
+$nextMR(overSigma, 0.91)
+$nextMR(costRatio, 6)
+
+; Load address of the Eighths table using the generated EQU name of the first entry
+acc32 = 0
+acc32 = acc32 xor eighthsTable_n
+; ... add desired table index ... e.g.
+acc32 = acc32 add 3
+r1 = [acc32]
+; r1 now has the desired eighth's value
+
 ;-----------------------------------
 ; _log built in function
 ;-----------------------------------
 
 $_log(The value of the 'myname' counter expected to be 12.5, the actional value is $_count(myname,get,)) ; No source generated for _log() macro
+
+$_log(This program is using $_count(nextmr,get,) of 128 Memory Registers)
