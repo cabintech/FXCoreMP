@@ -483,6 +483,7 @@ public class FXCoreMPMain {
 			// TOON processing
 			//---------------------------------------------------------------
 			
+			int pc = 0; // Program (instruction) counter
 			if (doToon) {
 				int lineCnt = 0;
 				List<String> toonOutput = new ArrayList<>();
@@ -501,6 +502,13 @@ public class FXCoreMPMain {
 							s = inBlockComment ? "; "+s : tooner.toonToAsm(stmt);
 							if (stmt.isBlockCommentStart()) {
 								inBlockComment = true;
+							}
+							if (!inBlockComment) {
+								String t = stmt.getText();
+								if ((t.length() > 0) && !t.startsWith(".")) { // Count non-empty non-directive lines
+									pc++;
+									//System.out.println("PC "+pc+": "+t);
+								}
 							}
 						} else {
 							s = tooner.asmToToon(s);
@@ -526,6 +534,8 @@ public class FXCoreMPMain {
 				}
 			}
 			
+			// Output warning if using >80% of the instruction storage //TODO: Make this trigger point a program arg '-warnCodePercent=80'
+			if (pc>819) System.out.println("NOTE: Using "+pc+" of 1024 available instructions ("+(int)((pc/1024.0)*100)+"%).");
 			
 			Util.info("FXCoreMP processing completed ("+(doMacro?"macros":"no macros")+", "+(doToon?"toon":"no toon")+(toonModeNormal?" [TOON-->ASM]":" [ASM-->TOON]")+")");
 			Util.info("  Errors:             "+syntaxErrors);
