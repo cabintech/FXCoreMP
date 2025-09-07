@@ -1,0 +1,18 @@
+.keyword.command { color: #CC6C15; }
+.keyword.reg {color: #80F2B0;  }
+.keyword.reg.sfr {color: #22A0D3; background-color:rgb(10,40,80);  }
+.keyword.reg.flagbits { background-color: rgb(220,220,255); }
+.keyword.control { color: #CC6C15; }
+.keyword.operator.math { color: #E6E6FA; }
+.keyword.operator.cond { color: #E6E6FA; }
+.keyword.brackets { color: #E6E6FA; }
+.macro.defn { color: #F2F200; }
+.macro.arg.subst { color: #3EABE6; background-color: #373737; font-style: italic; } /*text-decoration: underline; font-style: italic; }*/
+.macro.invocation { color: #6EF2B0; font-style: italic;}
+.string { color: #0DAAA3; }
+.comment { color: #6E8080; }
+.label {color: #FF9700; text-decoration: underline; } 
+
+.editor { background-color: rgb(0,0,0); color: rgb(212, 212, 212);  }
+.editor.lineHighlight  {background-color:  rgb(40, 40, 40); }
+.editor.selection {}
