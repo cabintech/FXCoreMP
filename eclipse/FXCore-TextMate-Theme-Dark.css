@@ -1,7 +1,7 @@
 .keyword.command { color: #CC6C15; }
 .keyword.reg {color: #80F2B0;  }
 .keyword.reg.sfr {color: #22A0D3; background-color:rgb(10,40,80);  }
-.keyword.reg.flagbits { background-color: rgb(220,220,255); }
+.keyword.reg.flagbits { color:#000000; background-color: #40B270; }
 .keyword.control { color: #CC6C15; }
 .keyword.operator.math { color: #E6E6FA; }
 .keyword.operator.cond { color: #E6E6FA; }
