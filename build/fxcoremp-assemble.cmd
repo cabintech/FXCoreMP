@@ -88,7 +88,7 @@ IF NOT EXIST "%outputdir%" (
 
 rem Macro processor: reads input file and outputs .fxc-mp
 echo -- Running FXCore Macro Preprocessor
-java -jar %jarfile% %source% "%outputdir%\%filename%.fxc-mp"
+java -jar %jarfile% %source% "%outputdir%\%filename%.fxc-mp" "--debug=info"
 if not %errorlevel% EQU 0 (
 	echo ERROR running macro preprocessor
 	color 4F

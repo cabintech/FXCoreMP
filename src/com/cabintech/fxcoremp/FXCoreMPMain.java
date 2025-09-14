@@ -538,11 +538,17 @@ public class FXCoreMPMain {
 			if (pc>1024) System.out.println("ERROR: Too many instructions, using "+pc+" of 1024 available instructions.");
 			else if (pc>819) System.out.println("NOTE: Using "+pc+" of 1024 available instructions ("+(int)((pc/1024.0)*100)+"%).");
 			
-			Util.info("FXCoreMP processing completed ("+(doMacro?"macros":"no macros")+", "+(doToon?"toon":"no toon")+(toonModeNormal?" [TOON-->ASM]":" [ASM-->TOON]")+")");
-			Util.info("  Errors:             "+syntaxErrors);
-			Util.info("  Included files:     "+includedFiles.size());
-			Util.info("  Macro definitions:  "+macroMap.size());
-			Util.info("  Output lines:       "+outSource.size()+" ("+outFile.getAbsolutePath()+")");
+			Util.info("FXCoreMP processing completed ("+(doMacro?"macros=yes":"macros=no")+", "+(doToon?"toon=yes":"toon=no")+(toonModeNormal?" [TOON-->ASM]":" [ASM-->TOON]")+")");
+			Util.info("  FXCore instructions : "+pc+" used of 1024 available");
+			Util.info("  Auto assigned MRs   : "+ (Macro.counterMap.containsKey("nextmr") ? (Macro.counterMap.get("nextmr").intValue()-1)+" used of 128 available" : "None"));
+			Util.info("  Errors              : "+syntaxErrors);
+			Util.info("  Included files      : "+includedFiles.size());
+			Util.info("  Macro definitions   : "+macroMap.size()); // +macroMap.keySet().toString());
+			Util.info("  Output lines        : "+outSource.size()+" ("+outFile.getAbsolutePath()+")");
+			
+			// Output warning if using >80% of the instruction storage //TODO: Make this trigger point a program arg '-warnCodePercent=80'
+			if (pc>1024) System.out.println("\nERROR: Too many instructions, using "+pc+" of 1024 available instructions.");
+			else if (pc>819) System.out.println("\nNOTE: Using "+pc+" of 1024 available instructions ("+(int)((pc/1024.0)*100)+"%).");
 			
 			if (pc>1024) System.exit(1); // Stop assembly process
 			

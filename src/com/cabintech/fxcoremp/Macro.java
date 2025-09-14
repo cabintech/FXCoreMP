@@ -165,7 +165,7 @@ public class Macro implements Constants {
 	private List<MacroParm> argNames = new ArrayList<>();				// List of argument name/direction
 	private List<Stmt> macroLines = new ArrayList<Stmt>();		// List of lines (one or more)
 	static private Map<String, Object> equMap = new HashMap<>();		// Map of symbols and expressions created by .equ statements
-	static private Map<String, Number> counterMap = new HashMap<>();	// Map of counter names to current values
+	static Map<String, Number> counterMap = new HashMap<>();	// Map of counter names to current values
 	private String sourceFile = null;
 	private static ExpressionConfiguration exprConfig = ExpressionConfiguration.builder().decimalPlacesRounding(12).build();
 	

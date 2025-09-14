@@ -41,7 +41,7 @@
                 <key>name</key>
                 <string>keyword.reg.sfr.fxcore</string>
                 <key>match</key>
-                <string>(?i)\b(in0|in1|in2|in3|out0|out1|out2|out3|pin|switch|pot0_k|pot1_k|pot2_k|pot3_k|pot4_k|pot5_k|pot0|pot1|pot2|pot3|pot4|pot5|pot0_smth|pot1_smth|pot2_smth|pot3_smth|pot4_smth|pot5_smth|lfo0_f|lfo1_f|lfo2_f|lfo3_f|ramp0_f|ramp1_f|lfo0_s|lfo0_c|lfo1_s|lfo1_c|lfo2_s|lfo2_c|lfo3_s|lfo3_c|ramp0_r|ramp1_r|maxtempo|taptempo|samplecnt|noise|bootstat|tapstkrld|tapdbrld|swdbrld|prgdbrld|oflrld)\b</string>
+                <string>(?i)\b(in0|in1|in2|in3|out0|out1|out2|out3|pin|switch|pot0_k|pot1_k|pot2_k|pot3_k|pot4_k|pot5_k|pot0|pot1|pot2|pot3|pot4|pot5|pot0_smth|pot1_smth|pot2_smth|pot3_smth|pot4_smth|pot5_smth|lfo0_f|lfo1_f|lfo2_f|lfo3_f|ramp0_f|ramp1_f|lfo0_s|lfo0_c|lfo1_s|lfo1_c|lfo2_s|lfo2_c|lfo3_s|lfo3_c|ramp0_r|ramp1_r|maxtempo|taptempo|samplecnt|noise|bootstat|tapstkrld|tapdbrld|swdbrld|prgdbrld|oflrld|sw0db|sw1db|sw2db|sw3db|sw4db)\b</string>
             </dict>
             <dict>
                 <key>name</key>
