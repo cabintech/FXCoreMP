@@ -505,6 +505,7 @@ public class FXCoreMPMain {
 							}
 							if (!inBlockComment) {
 								String t = stmt.getText();
+								//TODO: Bug?? -- this counts label lines and blank lines??
 								if ((t.length() > 0) && !t.startsWith(".")) { // Count non-empty non-directive lines
 									pc++;
 									//System.out.println("PC "+pc+": "+t);
@@ -532,6 +533,12 @@ public class FXCoreMPMain {
 					writer.write(out);
 					writer.newLine();
 				}
+			}
+			
+			if (Toon.ifStmtStack.size() > 0) { // Unclosed IF statement
+				Stmt stmt = Toon.ifStmtStack.getLast().startedAt();
+				System.out.println("ERROR: Missing ENDIF to IF statement started at "+stmt.getLineNum()+" in "+stmt.getFileName());
+				System.exit(1); // Stop assembly process
 			}
 			
 			// Output warning if using >80% of the instruction storage //TODO: Make this trigger point a program arg '-warnCodePercent=80'

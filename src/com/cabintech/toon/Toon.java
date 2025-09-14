@@ -1,11 +1,14 @@
 package com.cabintech.toon;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.cabintech.fxcoremp.IfStmtRecord;
 import com.cabintech.fxcoremp.Stmt;
 import com.cabintech.utils.Util;
 
@@ -208,6 +211,15 @@ public class Toon {
 			Map.entry("jzc", "jzc")
 			);
 	
+	// Map of allowed condition expression operators for IF statements, into negation of FXCore branch mnemonics.
+	private Map<String,String> CondJmpNegate = Map.ofEntries(
+			Map.entry("=", "jnz"),
+			Map.entry(">=", "jneg"),
+			Map.entry("<", "jgez"),
+			Map.entry("!=", "jz"), // Can be applied to "0" or "acc32.sign"
+			Map.entry("<>", "jz")
+			);
+	
 	// All FXCore Special Function Registers
 	static public Set<String> SrfNameSet = Set.of(
 			"in0",
@@ -267,7 +279,9 @@ public class Toon {
 			);
 	
 	// Track assembler .rn statements so we can determine the type of assignment operands 'x = y'.
-	private  Map<String,String> rnMap = new HashMap<>();
+	private Map<String,String> rnMap = new HashMap<>();
+	public static Deque<IfStmtRecord> ifStmtStack = new ArrayDeque<>();
+	private int ifCounter = 1;
 	
 	private boolean annotate = true; // Write original TOON statements as comments in each line of output. 
 	
@@ -446,16 +460,11 @@ public class Toon {
 			return stmt.getFullText(); // Nothing else to do with this statement, leave it unmodified
 		}
 		
-		if (tokenCnt < 2) return stmt.getFullText(); // All TOON statements have > 2 tokens, return anything else unmodified
+		if (tokenCnt < 1) return stmt.getFullText(); // All statements have > 1 tokens, return anything else unmodified
 		
 		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.
 		if (tokenList[0].equalsIgnoreCase("if")) {
-			if (tokenCnt < 4) throw new SyntaxException("Invalid IF statement syntax, expected at least 4 tokens but found only "+tokenCnt+".", stmt);
-			// 'IF <core-reg> <cond> <label>'
-			
-			//TODO: Write proper lexical tokenizer, this works on all valid conditions but fails to
-			// flag some invalid ones like "if r6 <=0 0 goto xxx" and cannot parse a single token
-			// like "if r6<0 goto xxx"
+			if (tokenCnt < 3) throw new SyntaxException("Invalid IF statement syntax, expected at least 3 tokens but found only "+tokenCnt+".", stmt);
 			
 			// See if the condition is a single token we recognize. Note right side can only be "0".
 			String condToken = tokenList[2].toLowerCase();
@@ -466,12 +475,51 @@ public class Toon {
 				throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
 			}
 			
+			// https://github.com/cabintech/FXCoreMP/issues/12
+			if (tokenCnt == 4) {
+				// Start of an IF block "if <core-reg> <cond>" (implies execute following code if the condition is TRUE, branch if FALSE)
+				
+				cond = CondJmpNegate.get(condToken); // Lookup the NEGATION condition token
+				if (cond == null) {
+					throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
+				}
+				
+				if (tokenList[3].equalsIgnoreCase("acc32.sign")) {
+					if (!cond.equals("jnz")) {
+						throw new SyntaxException("Invalid IF statement condition, the only test allowed for acc32.sign is '='.", stmt);
+					}
+					cond = "jzc"; // Special opcode for this test-and-branch
+				}
+
+				
+				// Generate target labels
+				String elseLabel = "_else_"+ifCounter;
+				String endLabel = "_endif_"+ifCounter;
+				ifCounter++;
+				
+				// Create a record of this IF statement
+				IfStmtRecord ifRecord = new IfStmtRecord(stmt, condToken, elseLabel, endLabel);
+				
+				// Put it on a stack of nestable IF statements
+				ifStmtStack.add(ifRecord);
+				
+				// Generate conditional brand to ELSE target (which will be same as ENDIF target if no ELSE is supplied)
+				return rebuildStatement(cond + SEP1 + tokenList[1] + "," + elseLabel, stmt, tokenList, 4);
+			}
+			
+			
+			// 'IF <core-reg> <cond> <label>'
+			
+			//TODO: Write proper lexical tokenizer, this works on all valid conditions but fails to
+			// flag some invalid ones like "if r6 <=0 0 goto xxx" and cannot parse a single token
+			// like "if r6<0 goto xxx"
+			
 			// If next symbol is "0", ignore it
 			int labelIndex = 3;  // Index of GOTO label
 			if (tokenList[labelIndex].equals("0")) { // Skip over "0" if present, e.g. "acc32 >= 0 goto xxx"
 				labelIndex++;
 			}
-			else if (tokenList[labelIndex].equals("acc32.sign")) { // Skip over "acc32.sign" if present, e.g. "r0 != acc32.sign goto xxx"
+			else if (tokenList[labelIndex].equalsIgnoreCase("acc32.sign")) { // Skip over "acc32.sign" if present, e.g. "r0 != acc32.sign goto xxx"
 				labelIndex++;
 				cond = "jzc"; // Different opcode
 			} 
@@ -486,6 +534,38 @@ public class Toon {
 			
 			// Generate FXCore assembler format (use original symbol, if any, for the register) for readability of the generated code
 			return rebuildStatement(cond + SEP1 + tokenList[1] + "," + tokenList[labelIndex], stmt, tokenList, labelIndex+1);
+		}
+		
+		if (tokenList[0].equalsIgnoreCase("else")) { // IF/ELSE/ENDIF https://github.com/cabintech/FXCoreMP/issues/12
+			if (tokenCnt > 1) throw new SyntaxException("Invalid ELSE statement syntax, expected a single token but found "+tokenCnt+".", stmt);
+			
+			if (ifStmtStack.size() == 0) { // No active IF block
+				throw new SyntaxException("Invalid ELSE statement, there is no enclosing IF statement.", stmt);
+			}
+			
+			
+			IfStmtRecord ifRecord = ifStmtStack.getLast(); // Most recent IF statement
+			ifRecord.elseTaken().set(true); // Note the ELSE label has been generated
+			
+			// Generate 2 lines: a branch around the ELSE clause, and then the ELSE label for subsequent code.
+			return rebuildStatement("jmp "+ifRecord.endLabel()+"\n"+ifRecord.elseLabel() + ":" + SEP1 , stmt, tokenList, 1);
+		}
+		
+		if (tokenList[0].equalsIgnoreCase("endif")) { // IF/ELSE/ENDIF https://github.com/cabintech/FXCoreMP/issues/12
+			if (tokenCnt > 1) throw new SyntaxException("Invalid ENDIF statement syntax, expected a single token but found "+tokenCnt+".", stmt);
+			
+			if (ifStmtStack.size() == 0) { // No active IF block
+				throw new SyntaxException("Invalid ENDIF statement, there is no enclosing IF statement.", stmt);
+			}
+			
+			String s = "";
+			IfStmtRecord ifRecord = ifStmtStack.removeLast(); // Get (and remove) this IF statement from the stack
+			if (!ifRecord.isElseTaken()) {
+				// No ELSE has been generated, build it now. Must be on a line by itself, assembler does not understand "label1: label2:".
+				s = ifRecord.elseLabel()+":\n";
+			}
+			ifRecord.elseTaken().set(true); // Note the ELSE label has been generated
+			return rebuildStatement(s + ifRecord.endLabel() + ":" + SEP1 , stmt, tokenList, 1);
 		}
 		
 		// Unconditional branch

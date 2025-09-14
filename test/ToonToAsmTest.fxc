@@ -139,6 +139,38 @@ jmp target_label				; jmp
 
 target_label:
 
+; IF/ELSE/ENDIF
+if r0 = 0
+	; do this code when r0 is zero
+else ; comment on the ELSE
+	; do this code when r0 is not zero
+endif ; end IF
+
+; IF/ENDIF
+if r0 <> 0
+	; do this code when r0 is not zero
+endif
+
+; 3-deep nested IF/ELSE/ENDIF
+if r0 = 0
+	if r1 <> 0
+		if r2 < 0
+			; Do this if r0=0 AND r1<>0 AND r2<0
+		else
+			; Do this if r0=0 AND r1<>0 AND r2>=0
+		endif
+	endif
+else
+	; Do this when r0 != 0
+endif
+
+; Special case of acc32.sign
+if r0 = acc32.sign
+  ; Do this when the sign bits are the same
+else
+  ; Do this when the sign bits are differnt
+endif
+
 // Test syntax variations
 ACC32 = r7 and 5 + 2 		; andi (inferred) verify constant expression with extra tokens
 acc64 = r0 macrd (200)		; macrd not using += notation
