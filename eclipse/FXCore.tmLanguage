@@ -9,7 +9,7 @@
                 <string>keyword.command.fxcore</string>
                 <key>match</key>
                 <!-- FXCore mnemonics plus TOON keywords and inferred mnemonics -->
-                <string>(?i)\b(if|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb)\b</string>
+                <string>(?i)\b(if|else|endif|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb)\b</string>
             </dict>
             <dict>
                 <key>name</key>

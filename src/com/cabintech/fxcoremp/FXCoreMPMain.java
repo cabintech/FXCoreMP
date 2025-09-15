@@ -504,11 +504,12 @@ public class FXCoreMPMain {
 								inBlockComment = true;
 							}
 							if (!inBlockComment) {
+								//TODO: Improve this ad-hoc way of counting instructions. The Stmt object is probably a better place to
+								// know if the statement generates 0, 1, or more machine instructions.
 								String t = stmt.getText();
-								//TODO: Bug?? -- this counts label lines and blank lines??
-								if ((t.length() > 0) && !t.startsWith(".")) { // Count non-empty non-directive lines
-									pc++;
+								if ((t.length() > 0) && !t.startsWith(".") && !t.endsWith(":") && !t.equalsIgnoreCase("endif")) { // Count non-empty, non-directive, non-label-only lines
 									//System.out.println("PC "+pc+": "+t);
+									pc++;
 								}
 							}
 						} else {
@@ -547,7 +548,7 @@ public class FXCoreMPMain {
 			
 			Util.info("FXCoreMP processing completed ("+(doMacro?"macros=yes":"macros=no")+", "+(doToon?"toon=yes":"toon=no")+(toonModeNormal?" [TOON-->ASM]":" [ASM-->TOON]")+")");
 			Util.info("  FXCore instructions : "+pc+" used of 1024 available");
-			Util.info("  Auto assigned MRs   : "+ (Macro.counterMap.containsKey("nextmr") ? (Macro.counterMap.get("nextmr").intValue()-1)+" used of 128 available" : "None"));
+			Util.info("  Auto assigned MRs   : "+ (Macro.counterMap.containsKey("nextmr") ? (Macro.counterMap.get("nextmr").intValue())+" used of 128 available" : "None"));
 			Util.info("  Errors              : "+syntaxErrors);
 			Util.info("  Included files      : "+includedFiles.size());
 			Util.info("  Macro definitions   : "+macroMap.size()); // +macroMap.keySet().toString());

@@ -2,6 +2,7 @@ package com.cabintech.toon;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -466,9 +467,17 @@ public class Toon {
 		if (tokenList[0].equalsIgnoreCase("if")) {
 			if (tokenCnt < 3) throw new SyntaxException("Invalid IF statement syntax, expected at least 3 tokens but found only "+tokenCnt+".", stmt);
 			
-			// See if the condition is a single token we recognize. Note right side can only be "0".
+			// See if the condition is a single composite token like "<=0" for backward compatibility. We convert to 2 tokens "<=" and "0" so the rest
+			// of the code can ignore this special historical case.
 			String condToken = tokenList[2].toLowerCase();
-			if (condToken.endsWith("0")) condToken = Util.jsSubstring(condToken, 0, condToken.length()-1); // Remove any trailing 0 char, like "<=0"
+			if (condToken.endsWith("0")) {
+				condToken = Util.jsSubstring(condToken, 0, condToken.length()-1); // Remove trailing 0 char, like "<=0"
+				// Add new token into the list
+				List<String> tList = new ArrayList<>(Arrays.asList(tokenList));
+				tList.add(3, "0");
+				tokenList = tList.toArray(new String[0]);
+				tokenCnt = tList.size();
+			}
 			
 			String cond = CondJmpExpr.get(condToken); // Lookup the condition token
 			if (cond == null) {
@@ -476,8 +485,9 @@ public class Toon {
 			}
 			
 			// https://github.com/cabintech/FXCoreMP/issues/12
-			if (tokenCnt == 4) {
-				// Start of an IF block "if <core-reg> <cond>" (implies execute following code if the condition is TRUE, branch if FALSE)
+			
+			if (tokenCnt == 4) { // No GOTO or target label
+				// Start of an IF block "if <core-reg> <cond> 0" (implies execute following code if the condition is TRUE, branch if FALSE)
 				
 				cond = CondJmpNegate.get(condToken); // Lookup the NEGATION condition token
 				if (cond == null) {
