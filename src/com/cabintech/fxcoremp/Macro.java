@@ -822,7 +822,7 @@ public class Macro implements Constants {
 					}
 				}
 				
-				if (namevalue.length < 2 || namevalue[0].trim().length()==0 || namevalue[1].trim().length()==0) {
+				if (namevalue.length < 2 || namevalue[0].trim().length()==0) { // || namevalue[1].trim().length()==0) {
 					throw new SyntaxException("Invalid argName=argValue specification '"+argText+"'.", stmt);
 				}
 				

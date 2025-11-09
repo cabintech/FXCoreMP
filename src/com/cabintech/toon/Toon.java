@@ -579,12 +579,12 @@ public class Toon {
 		}
 		
 		// Unconditional branch
-		if (tokenList[0].toUpperCase().equals("JMP") || tokenList[0].toUpperCase().equals("GOTO")) {
+		if ((tokenCnt > 1) &&  (tokenList[0].toUpperCase().equals("JMP") || tokenList[0].toUpperCase().equals("GOTO"))) {
 			return rebuildStatement("jmp" + SEP1 + tokenList[1], stmt, tokenList, 2);
 		}
 		
 		// Assignment style TOON statements 'x = ..."
-		if (tokenList[1].equals("=") || tokenList[1].equals("+=")) {
+		if ((tokenCnt > 2) && (tokenList[1].equals("=") || tokenList[1].equals("+="))) {
 			if (tokenCnt < 3) throw new SyntaxException("Invalid TOON instruction format, missing right side of assignment.", stmt);
 			
 			Operand left = new Operand(tokenList[0], rnMap);
