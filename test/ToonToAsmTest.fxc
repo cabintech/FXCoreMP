@@ -5,10 +5,11 @@
 ; FXCoreMP, the assembler preprocessor, and the assembler. The assembler should flag
 ; no errors. The output file of the macro processor (*.xfc-mp) should be examined to
 ; manually validate that the correct instruction was generated for each TOON statement.
-;
-; (x) indirect addressing of delay memory with address counter (AGU)
-; @(x) absolute indirect addressing of delay memory (no address counter)
-; [x] indirect addressing of memory registers
+
+.rn myreg1 r6
+.rn myreg2 r7
+
+.mem buffer 4000
 
 ; Basic assignment
 r0 = r1		; cpy_cc (inferred)
@@ -34,6 +35,7 @@ ACC64.L = r5	; ldacc64l
 ; Delay memory load and store
 r4 = (2487) ; rddel read r4 from abs mem addr
 (2487) = r4 ; wrdel
+(buffer+6) = r4 ; wrdel
 
 r0 = (r5)   ; rddelx read DelayMem indirectly by R5
 (r5) = r0	; wrdelx
@@ -44,6 +46,18 @@ r0 = #(r5)  ; rddirx read r0 from delaymem indirect and absolute
 ACC32 = interp (r5+200) ; interp
 acc32 = interp (r0) 	; interp
 
+; all-pass filter variations
+acc32,r15 = acc32 allpass 0.4, (buffer), (buffer#) ; apa 0.4,buff# ; apb 0.4,buff
+acc32,r15 = acc32 allpass r0, (myreg1), (r2) ; aprra r0,r2 ; aprrb r0,myreg1
+acc32,r15 = acc32 allpass r0, (buffer), (buffer#) ; apra r0,buff# ; aprb r0, buff
+acc32,r15 = acc32 allpass myreg1, mr12 ; apma myreg1,mr12 ; apmb myreg1, mr12
+acc32,r15 = acc32 allpass myreg1, mr12 ; apma myreg1,mr12 ; apmb myreg1, mr12
+
+; chorus variations
+acc32 = chorus r15, lfo1, +sin, (400) 	; chr lfo1|sin|0,400
+acc32,r15 = chorus r2, lfo1, +sin, (400)	; cpy_cc r15,r2; chr lfo1|sin|0,400
+acc32,r15 = chorus mr27, lfo2, cos, (400)	; cpy_cm r15, mr27; chr lfo2|cos|0,400
+acc32,r15 = chorus 200, lfo3, -sin, (400)	; wrdld r15,200; chr lfo3|sin|1,400
 
 ; Unary logic operations
 ACC32 = inv r0	; inv
@@ -139,19 +153,23 @@ jmp target_label				; jmp
 
 target_label:
 
-; IF/ELSE/ENDIF
+;-----------------------------------------------------------------------
+; IF - THEN - ELSE - ENDIF
+;-----------------------------------------------------------------------
+
+; Basic
 if r0 = 0
 	; do this code when r0 is zero
 else ; comment on the ELSE
 	; do this code when r0 is not zero
 endif ; end IF
 
-; IF/ENDIF
+; No else clause
 if r0 <> 0
 	; do this code when r0 is not zero
 endif
 
-; 3-deep nested IF/ELSE/ENDIF
+; 3-deep nested 
 if r0 = 0
 	if r1 <> 0
 		if r2 < 0
@@ -171,21 +189,56 @@ else
   ; Do this when the sign bits are differnt
 endif
 
-// Test syntax variations
+
+;-----------------------------------------------------------------------
+; IF-THEN-ELSE-ENDIF syntax variations
+;-----------------------------------------------------------------------
+
+; THEN on same line as IF 
+if r0 = 0 then
+  r1 = r10 ; do this when r0 is zero
+endif
+
+; THEN <stmt> on same line as IF
+if r0 = 0 then r1 = r10
+endif
+
+; THEN on its own line
+if r0 = 0
+then
+  r1 = r10
+endif
+
+; THEN <stmt> on its own line
+if r0 = 0
+  then r1 = r10
+endif
+
+; ELSE followed by <stmt>
+if r0 = 0
+  then r1 = r10
+  else r1 = r11
+endif
+
+; THEN and ELSE
+if r0 = 0
+  then r1 = r10
+  r2 = r12
+ else r1 = r11
+  r2 = r13
+ endif
+
+;-----------------------------------------------------------------------
+; End of IF-THEN-ELSE-ENDIF
+;-----------------------------------------------------------------------
+
+
+// TOON syntax variations
 ACC32 = r7 and 5 + 2 		; andi (inferred) verify constant expression with extra tokens
 acc64 = r0 macrd (200)		; macrd not using += notation
 
 
 ; All other instructions use FXCore assembler
-apa -0.1, 200
-apb 0.1, 0
-apra r0, 200
-aprb r0, 0
-aprra r0, r1
-aprrb r0, r1
-apma r0, mr10
-apmb r0, mr10
-chr lfo0|SIN, 200
 pitch rmp0|L4096, 4096
 set user0|15, r0
 
@@ -311,6 +364,6 @@ r1 = [acc32]
 ; _log built in function
 ;-----------------------------------
 
-$_log(The value of the 'myname' counter expected to be 12.5, the actional value is $_count(myname,get,)) ; No source generated for _log() macro
+$_log(The value of the 'myname' counter expected to be 12.5. The actional value is $_count(myname,get,)) ; No source generated for _log() macro
 
 $_log(This program is using $_count(nextmr,get,) of 128 Memory Registers)

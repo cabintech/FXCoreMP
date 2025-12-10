@@ -161,7 +161,8 @@ public class Toon {
 			"xori",
 			"multrr",
 			"multri",
-			"mult"		// Synthetic
+			"mult",		// Synthetic
+			"allpass"	// Synthetic
 			);
 	
 	// 1 operand instructions that target ACC32 'acc32 = instr x'
@@ -171,7 +172,8 @@ public class Toon {
 			"neg",
 			"log2",
 			"exp2",
-			"interp"
+			"interp",
+			"chorus"
 			);
 
 	// 2 operand instructions that target ACC64 'acc64 = x instr y'
@@ -279,8 +281,21 @@ public class Toon {
 			"oflrld"	
 			);
 	
+	/**
+	 * LFO names, upper case. These are not technically SRFs, they identify a set of SRFs to be
+	 * used to generate a signal (e.g. "lfo0" identifies SRFs lfo0_f, lfo0_s, and lfo0_c).
+	 */
+	static public Set<String> LfoNames = Set.of(
+			"LFO0",
+			"LFO1",
+			"LFO2",
+			"LFO3"
+			);
+			
+			
+	
 	// Track assembler .rn statements so we can determine the type of assignment operands 'x = y'.
-	private Map<String,String> rnMap = new HashMap<>();
+	static Map<String,String> rnMap = new HashMap<>(); // Also used in Operand class
 	public static Deque<IfStmtRecord> ifStmtStack = new ArrayDeque<>();
 	private int ifCounter = 1;
 	
@@ -377,6 +392,24 @@ public class Toon {
 		return s.toString();
 	}
 	
+	/**
+	 * Concatenate all the tokens in the given list starting at the given index.
+	 * @param tokens
+	 * @param startAt
+	 * @return
+	 */
+	private String allTokensFrom(String[] tokens, int startAt) {
+
+		StringBuilder sb = new StringBuilder();
+		if (tokens != null) {
+			for (int i=startAt; i < tokens.length; i++) {
+				sb.append(tokens[i]);
+			}
+		}
+		return sb.toString();
+	}
+	
+	
 	private static String[] insertElement(String[] a, int index, String newS) {
 		if (index >= a.length) throw new IllegalArgumentException("Index value "+index+" is larger the array max index "+a.length);
 		// Crude but effective if list is not large
@@ -396,7 +429,7 @@ public class Toon {
 	}
 
 	/**
-	 * Returns the given source statement 's' as-is, or if it is recognized as a TOON
+	 * Returns the given source statement as-is, or if it is recognized as a TOON
 	 * statement, the translated FXCore assembler statement is returned.
 	 * @param s
 	 * @return
@@ -463,7 +496,10 @@ public class Toon {
 		
 		if (tokenCnt < 1) return stmt.getFullText(); // All statements have > 1 tokens, return anything else unmodified
 		
-		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.
+		// IF conditional branch //TODO: This precludes a symbol named 'if', e.g. 'if = r0'.d
+		// Expected syntax:
+		//        if <crReg> <condition> <value> [GOTO|THEN|<label>]
+		// index  0  1       2           3       4
 		if (tokenList[0].equalsIgnoreCase("if")) {
 			if (tokenCnt < 3) throw new SyntaxException("Invalid IF statement syntax, expected at least 3 tokens but found only "+tokenCnt+".", stmt);
 			
@@ -484,10 +520,12 @@ public class Toon {
 				throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
 			}
 			
-			// https://github.com/cabintech/FXCoreMP/issues/12
+			// Implement IF/ELSE/ENDIF constructs (https://github.com/cabintech/FXCoreMP/issues/12)
 			
-			if (tokenCnt == 4) { // No GOTO or target label
-				// Start of an IF block "if <core-reg> <cond> 0" (implies execute following code if the condition is TRUE, branch if FALSE)
+			if ((tokenCnt == 4) || // No keyword or label, default is same as THEN keyword
+				((tokenCnt > 4) && tokenList[4].toLowerCase().equals("then"))) {
+				
+				// Start of an IF block "if <core-reg> <cond> 0 then" (eg. execute following code if the condition is TRUE, branch if FALSE)
 				
 				cond = CondJmpNegate.get(condToken); // Lookup the NEGATION condition token
 				if (cond == null) {
@@ -510,11 +548,23 @@ public class Toon {
 				// Create a record of this IF statement
 				IfStmtRecord ifRecord = new IfStmtRecord(stmt, condToken, elseLabel, endLabel);
 				
-				// Put it on a stack of nestable IF statements
+				// Put it on a stack of nested IF statements
 				ifStmtStack.add(ifRecord);
 				
-				// Generate conditional brand to ELSE target (which will be same as ENDIF target if no ELSE is supplied)
-				return rebuildStatement(cond + SEP1 + tokenList[1] + "," + elseLabel, stmt, tokenList, 4);
+				// Generate conditional branch to ELSE target (which will be same as ENDIF target if no ELSE is supplied)
+				String rebuild = rebuildStatement(cond + SEP1 + tokenList[1] + "," + elseLabel, stmt, null, 0);
+				
+				// If there is a statement after THEN, make recursive call to evaluate it and return it
+				// with the conditional branch (as a 2nd line).
+				if (tokenCnt > 5) {
+					// Recursive call to evaluate the statement after THEN and translate from TOON to ASM
+					String afterThen = String.join(" ",Arrays.copyOfRange(tokenList, 5, tokenList.length));
+					String asmText = toonToAsm(new Stmt(afterThen, stmt.getLineNum(), stmt.getFileName(), true));
+					rebuild = rebuild + "\n" + rebuildStatement(asmText, stmt, null, 0);
+				}
+				
+				return rebuild;
+
 			}
 			
 			
@@ -534,7 +584,7 @@ public class Toon {
 				cond = "jzc"; // Different opcode
 			} 
 			
-			Operand target = new Operand(tokenList[1], rnMap);
+			Operand target = new Operand(tokenList[1]);
 			if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR.", stmt);
 			
 			// Skip optional 'goto' token
@@ -546,19 +596,52 @@ public class Toon {
 			return rebuildStatement(cond + SEP1 + tokenList[1] + "," + tokenList[labelIndex], stmt, tokenList, labelIndex+1);
 		}
 		
+		// THEN clause of an IF/THEN/ELSE. This is a noop, it has no function. We do allow a statement after the THEN, e.g.
+		// if t1 > 0
+		//   then acc32 = r12
+		//   else acc32 = r11
+		// endif
+		
+		if (tokenList[0].equalsIgnoreCase("then")) { 
+			//TODO: Verify this is immediately after an IF statement
+			
+			if (ifStmtStack.size() == 0) { // No active IF block
+				throw new SyntaxException("Invalid THEN statement, there is no enclosing IF statement.", stmt);
+			}
+			
+			// If there is any non-comment text after the THEN, it is presumed to be another TOON statement
+			if (tokenCnt > 1) {
+				// Recursive call to evaluate the statement after THEN and translate from TOON to ASM
+				String afterThen = String.join(" ",Arrays.copyOfRange(tokenList, 1, tokenList.length));
+				String asmText = toonToAsm(new Stmt(afterThen, stmt.getLineNum(), stmt.getFileName(), true));
+				return rebuildStatement(asmText, stmt, null, 0);
+			}
+			
+			// Generate no code for a simple THEN other than any comment that might follow
+			return rebuildStatement("", stmt, null, 0);
+		}
+		
 		if (tokenList[0].equalsIgnoreCase("else")) { // IF/ELSE/ENDIF https://github.com/cabintech/FXCoreMP/issues/12
-			if (tokenCnt > 1) throw new SyntaxException("Invalid ELSE statement syntax, expected a single token but found "+tokenCnt+".", stmt);
 			
 			if (ifStmtStack.size() == 0) { // No active IF block
 				throw new SyntaxException("Invalid ELSE statement, there is no enclosing IF statement.", stmt);
 			}
 			
-			
 			IfStmtRecord ifRecord = ifStmtStack.getLast(); // Most recent IF statement
 			ifRecord.elseTaken().set(true); // Note the ELSE label has been generated
 			
 			// Generate 2 lines: a branch around the ELSE clause, and then the ELSE label for subsequent code.
-			return rebuildStatement("jmp "+ifRecord.endLabel()+"\n"+ifRecord.elseLabel() + ":" + SEP1 , stmt, tokenList, 1);
+			String rebuild = rebuildStatement("jmp "+ifRecord.endLabel()+"\n"+ifRecord.elseLabel() + ":" + SEP1 , stmt, null, 0);
+			
+			// If there is any non-comment text after the ELSE, evaluate with recursive call and add as the 3rd line of output
+			if (tokenCnt > 1) {
+				// Recursive call to evaluate the statement after THEN and translate from TOON to ASM
+				String afterElse = String.join(" ",Arrays.copyOfRange(tokenList, 1, tokenList.length));
+				String asmText = toonToAsm(new Stmt(afterElse, stmt.getLineNum(), stmt.getFileName(), true));
+				rebuild = rebuild + "\n" + rebuildStatement(asmText, stmt, null, 0);
+			}
+			
+			return rebuild;
 		}
 		
 		if (tokenList[0].equalsIgnoreCase("endif")) { // IF/ELSE/ENDIF https://github.com/cabintech/FXCoreMP/issues/12
@@ -587,8 +670,8 @@ public class Toon {
 		if ((tokenCnt > 2) && (tokenList[1].equals("=") || tokenList[1].equals("+="))) {
 			if (tokenCnt < 3) throw new SyntaxException("Invalid TOON instruction format, missing right side of assignment.", stmt);
 			
-			Operand left = new Operand(tokenList[0], rnMap);
-			Operand right = new Operand(tokenList[2], rnMap);
+			Operand left = new Operand(tokenList[0]);
+			Operand right = new Operand(tokenList[2]);
 			
 			// "+=" only supported for certain ACC64 assignments, it is for decoration only and not required
 			if (tokenList[1].equals("+=")) {
@@ -619,25 +702,100 @@ public class Toon {
 			// 1 arg functions "acc32 = <func> <cr>"
 			if ((tokenCnt >= 3) && Ops1ArgAcc32Set.contains(tokenList[2].toLowerCase())) {
 				if (tokenCnt < 4) throw new SyntaxException("Invalid assignment, missing expected operand after '"+tokenList[2]+"'.", stmt);
-				right = new Operand(tokenList[3], rnMap);
+				right = new Operand(tokenList[3]);
 				
-				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+tokenList[2]+"' function must be ACC32.", stmt);
+				if (!left.isAcc32() && !left.isAcc32R15()) throw new SyntaxException("Target of assignment for '"+tokenList[2]+"' function must be ACC32.", stmt);
+				
+				// Special case "ACC32,R15 = CHORUS depth, lfo, +/-/sin/cos, (const-addr)
+				//   depth can be CR, MR, or const and will be loaded in R15.U. If depth is R15, it is used as-is in the CHR
+				if (tokenList[2].toLowerCase().equals("chorus")) {
+					if (tokenCnt < 4) {
+						throw new SyntaxException("CHORUS statement is missing arguments.");
+					}
+					// Comma separated tokens may also have blanks between them, so gather up all the remaining tokens, remove blanks, and split only on commas
+					String remainder = allTokensFrom(tokenList, 3).replace(" ", "");
+					String parts[] = Util.split(remainder, ",", 0);
+					if (parts.length != 4)  throw new SyntaxException("CHORUS must have 4 arguments '... CHORUS depth,lfo,+/-/sin/cos,(addr)'.", stmt);
+					
+					Operand depth = new Operand(parts[0]);
+					Operand lfo = new Operand(parts[1]);
+					Operand sincos = new Operand(parts[2]);
+					Operand addr = new Operand(parts[3]);
+					
+					//--- Sanity checks
+
+					// Only an indirect constant delay memory address is allowed
+					if (!(addr.isDMIndirect() && !addr.isReg())) throw new SyntaxException("CHORUS delay memory address (4th arg) must be indirect constant, e.g. '(200)'.", stmt);
+					// Depth must be a CR, MR, or constant (for which we generate different code) and cannot be indirect
+					if (!((depth.isCR() || depth.isMR() || (!depth.isReg()) && depth.isPlain())))
+						throw new SyntaxException("CHORUS depth (1st arg) must be CR, MR, or constant. Found '"+depth.getOpText()+"'.", stmt);
+					if (!LfoNames.contains(lfo.getOpText())) {
+						throw new SyntaxException("CHORUS lfo (2nd arg) must be one of LFO0, LFO1, LFO2, or LFO3. Found '"+lfo.getOpText()+"'.", stmt);
+					}
+					if (!depth.getOpText().equals("R15") && !left.isAcc32R15()) {
+						// We are strongly enforcing TOON semantics, left side of assignment must explicitly show the
+						// target(s) of the operation. In this case we will be generating code that updates R15 so the
+						// statement (left side of '=') must explicitly show that R15 is a target in addition to ACC32 (kinda the point of TOON)
+						throw new SyntaxException("CHORUS will target R15 as well as ACC32. Left side of assignment must be 'ACC32,R15'.", stmt);
+					}
+					else if (depth.getOpText().equals("R15") && left.isAcc32R15()) {
+						// Likewise, do not show R15 on the left if the generated code is not going to update it
+						throw new SyntaxException("CHORUS will not target (update) R15. Left side of assignment must be only 'ACC32'.", stmt);
+					}
+					
+					String phase = sincos.getOpText();
+					String sign = phase.startsWith("-") ? "1" : "0"; // Default is + sign
+					if (phase.startsWith("+") || phase.startsWith("-")) { // Remove sign prefix if any
+						phase = Util.jsSubstring(phase, 1);
+					}
+					if (!phase.equals("SIN") && !phase.equals("COS")) {
+						throw new SyntaxException("CHORUS phase (3nd arg) must be one of SIN or COS (with optional leading '+' or '-').", stmt);
+					}
+					
+					//--- Generate (variable number of) instructions. When we generate TOON statements a recursive call is done to
+					// resolve it into assembler (simplifies the code we need to generate). Note '\n' delimits multiple instructions.
+					String instrs = "";
+					
+					// Generate code to get depth into upper half of R15
+					if (depth.isCR() || depth.isMR()) {
+						// Depth is a CR or MR register, TOON statement will generate correct opcode to assign to R15
+						if (!depth.getOpText().equals("R15")) { // No need to do anything if already there
+							instrs = toonToAsm(new Stmt("R15 = "+depth.getOpText() + SEP1 + "; Get depth into R15", stmt.getLineNum(), stmt.getFileName(), true)) + "\n";
+						}
+					}
+					else {
+						// Depth is a constant, generate code to get it into upper half of R15. 
+						instrs = toonToAsm(new Stmt("R15.U = "+depth.getOpText() + SEP1 + ";Load depth to R15 upper half", stmt.getLineNum(), stmt.getFileName(), true)) + "\n";
+					}
+					
+					// Generate and return CHR instruction
+					return instrs + rebuildStatement("chr" + SEP1 + lfo.getOpText()+"|"+phase+"|"+sign+","+addr.getOpText(), stmt, null, 0);
+					
+				} // end CHORUS
+				
+				// All other instructions in this set must target (only) ACC32.
+				if (!left.isAcc32()) {
+					// Strict enforcement of TOON semantics, ALLPASS targets both ACC32 and R15
+					throw new SyntaxException("The function '"+tokenList[2]+"' targets only ACC32. Left side of assignment must be 'ACC32'.", stmt);
+				}
+				
 				// Special case, "ACC32 = INTERP (cr+const)" - right side is indirect sum of CR and a constant
 				if (tokenList[2].toLowerCase().equals("interp")) {
 					if (!right.isDMIndirect()) throw new SyntaxException("INTERP operand must be indirect '(CR)' or '(CR+constant)'. Expected parens not found.", stmt);
 					String is = right.getOpText();
 					String parts[] = Util.split(is, "\\+", 2);
 					if (parts.length < 1)  throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'.", stmt);
-					Operand p1 = new Operand(parts[0], rnMap);
-					Operand p2 = new Operand("0", rnMap); // Assume constant is zero unless specified
+					Operand p1 = new Operand(parts[0]);
+					Operand p2 = new Operand("0"); // Assume constant is zero unless specified
 					if (parts.length == 2) { // Second part was specified
-						p2 = new Operand(parts[1], rnMap);
+						p2 = new Operand(parts[1]);
 					}
 					if (!p1.isCR()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. CR not found.", stmt);
 					if (p2.isReg()) throw new SyntaxException("INTERP operand must be of the form '(CR)' or '(CR+constant)'. Constant not found.", stmt);
 					// Looks like a valid INTERP statement
 					return rebuildStatement("interp" + SEP1 + p1.getOpText() + "," + p2.getOpText(), stmt, tokenList, 4);
-				}
+				} // end INTERP
+				
 				if (!left.isPlain() || !right.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers.", stmt);
 				if (!right.isCR()) throw new SyntaxException("Source for assignment operation must be a CR.", stmt);
 				return rebuildStatement(tokenList[2] + SEP1 + right.getOpText(), stmt, tokenList, 4);
@@ -647,25 +805,99 @@ public class Toon {
 			if ((tokenCnt >= 4) && Ops2ArgAcc32Set.contains(tokenList[3].toLowerCase()) ) {
 				String func = tokenList[3].toLowerCase();
 				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"'.", stmt);
-				Operand op1 = new Operand(tokenList[2], rnMap);
-				Operand op2 = new Operand(tokenList[4], rnMap);
+				Operand op1 = new Operand(tokenList[2]);
+				Operand op2 = new Operand(tokenList[4]);
 				
-				if (!left.isAcc32()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC32.", stmt);
+				if (!left.isAcc32() && !left.isAcc32R15()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC32.", stmt);
 				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC32.", stmt);
 				// Left side of func must be a CR for all 32-bit two operand instructions
-				if (!op1.isCR()) throw new SyntaxException("Left operand for function '"+func+"' must be a CR.", stmt);
+				if (!op1.isCR()) {
+					throw new SyntaxException("Left operand for function '"+func+"' must be a CR.", stmt);
+				}
+				
+				// Special case "ACC32 = acc32 ALLPASS coeff, head, [tail]" (TAIL is is optional if HEAD is an MR)
+				// acc32,r15	= acc32 allpass <const>, (addr), (addr#) ; Generate APA, APB
+				// acc32,r15	= acc32 allpass <cr-coeff>, (addr), (addr#) ; Generate APRA, APRB
+				// acc32,r15	= acc32 allpass <cr-coeff>, (<cr-addr-head>), (<cr-addr-tail>) ; Generate APRRA, APRRB
+				// acc32,r15	= acc32 allpass <cr-coeff>, <mreg>) ; Generate APMA, APMB
+				if (tokenList[3].toLowerCase().equals("allpass")) {
+					if (left.isAcc32()) {
+						// Strict enforcement of TOON semantics, ALLPASS targets both ACC32 and R15
+						throw new SyntaxException("ALLPASS will target R15 as well as ACC32. Left side of assignment must be 'ACC32,R15'.", stmt);
+					}
+					
+					// Comma separated tokens may also have blanks between them, so gather up all the remaining tokens, remove blanks, and split only on commas
+					String remainder = allTokensFrom(tokenList, 4).replace(" ", "");
+					String parts[] = Util.split(remainder, ",", 0);
+					if (parts.length < 2 || parts.length > 4)  throw new SyntaxException("ALLPASS must have 2 or 3 arguments '... ALLPASS <coeff>,<head>,[<tail>]'.", stmt);
+					
+					Operand coeff = new Operand(parts[0]);
+					Operand head = new Operand(parts[1]);
+					Operand tail = parts.length > 2 ? new Operand(parts[2]) : new Operand(parts[1]); // If missing, same as HEAD
+					
+					// If HEAD is an MR, then tail is optional and we generate the APMA, APMB instructions
+					if (head.isMR()) {
+						if (!head.getOpText().equals(tail.getOpText())) {
+							throw new SyntaxException("ALLPASS with MR head, tail argument must be the same.", stmt);
+						}
+						if (!coeff.isCR()) {
+							throw new SyntaxException("ALLPASS with MR head, must have CR for coeff.", stmt);
+						}
+						//TODO: Hack to return 2 statements in one String
+						return 
+							rebuildStatement("apma" + SEP1 + coeff.getOpText() + "," + tail.getOpText(), stmt, null, 0) + "\n" +
+							rebuildStatement("apmb" + SEP1 + coeff.getOpText() + "," + head.getOpText(), stmt, null, 0);
+					}
+					
+					// If COEFF is a CR, then head and tail must be delay memory indirect CR or constant references 
+					if (coeff.isCR()) {
+						if (!head.isDMIndirect() || (!head.isCR() && head.isReg())) {
+							throw new SyntaxException("ALLPASS with CR coeff must have indirect CR or constant HEAD reference e.g. (r6) or (200).", stmt);
+						}
+						if (!tail.isDMIndirect() || (!tail.isCR() && tail.isReg())) {
+							throw new SyntaxException("ALLPASS with CR coeff must have indirect CR or constant TAIL reference e.g. (r6) or (200).", stmt);
+						}
+						// Generate instruction variants
+						String opCode = head.isReg() ? "aprr" : "apr";
+						//TODO: Hack to return 2 statements in one String
+						return 
+							rebuildStatement(opCode+"a" + SEP1 + coeff.getOpText() + "," + tail.getOpText(), stmt, null, 0) + "\n" +
+							rebuildStatement(opCode+"b" + SEP1 + coeff.getOpText() + "," + head.getOpText(), stmt, null, 0);
+					}
+					
+					// Only other case is constant coeff with constant indirect memory addressing
+					if (!coeff.isReg()) {
+						if (!head.isDMIndirect() || (head.isReg())) {
+							throw new SyntaxException("ALLPASS with constant coeff must have indirect constant HEAD reference e.g. (200).", stmt);
+						}
+						if (!tail.isDMIndirect() || (tail.isReg())) {
+							throw new SyntaxException("ALLPASS with constant coeff must have indirect constant TAIL reference e.g. (200).", stmt);
+						}
+						
+					
+						return 
+							rebuildStatement("apa" + SEP1 + coeff.getOpText() + "," + tail.getOpText(), stmt, null, 0) + "\n" +
+							rebuildStatement("apb" + SEP1 + coeff.getOpText() + "," + head.getOpText(), stmt, null, 0);
+					}
+					
+					// If none of the above, the args for ALLPASS are invalid.
+					throw new SyntaxException("ALLPASS has invalid args, '<coeff>,<head>,<tail>' must be of the allowed types.", stmt);
+					
+				}
+
+				// All other instructions in this set must target (only) ACC32.
+				if (!left.isAcc32()) {
+					// Strict enforcement of TOON semantics, ALLPASS targets both ACC32 and R15
+					throw new SyntaxException("The function '"+func+"' targets only ACC32. Left side of assignment must be 'ACC32'.", stmt);
+				}
+
 				
 				// Some instructions have immediate and register forms for <op2> but we allow use of
 				// generic instruction names, e.g. "r0 = r1 and 0x1" is really the "andi" instruction, not "and".
 				// So we try to infer the correct instruction from the type of <op>.
 				func = inferFunc(func, op1, op2, stmt);
 				
-				// Some special cases
-				if (func.equals("interp")) {
-					if (!op1.isDMIndirect()) throw new SyntaxException("Left operand for function '"+func+"' must be indirect notataion, enclose in parens.", stmt);
-				} else {
-					if (!op1.isPlain()) throw new SyntaxException("Left operand for function '"+func+"' does not support indirectin or modifiers.", stmt);
-				}
+				if (!op1.isPlain()) throw new SyntaxException("Left operand for function '"+func+"' does not support indirectin or modifiers.", stmt);
 				
 				return rebuildStatement(func + SEP1 + op1.getOpText() + "," + op2.getOpText(), stmt, tokenList, 5);
 			}
@@ -674,8 +906,8 @@ public class Toon {
 			if ((tokenCnt >= 4) && Ops2ArgAcc64Set.contains(tokenList[3].toLowerCase()) ) {
 				String func = tokenList[3].toLowerCase();
 				if (tokenCnt < 5) throw new SyntaxException("Invalid assignment, missing expected operand after '"+func+"'.", stmt);
-				Operand op1 = new Operand(tokenList[2], rnMap);
-				Operand op2 = new Operand(tokenList[4], rnMap);
+				Operand op1 = new Operand(tokenList[2]);
+				Operand op2 = new Operand(tokenList[4]);
 				
 				if (!left.isAcc64()) throw new SyntaxException("Target of assignment for '"+func+"' function must be ACC64.", stmt);
 				if (!left.isPlain()) throw new SyntaxException("This assignment operation does not support indirection or modifiers on ACC64.", stmt);

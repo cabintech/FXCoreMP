@@ -9,31 +9,35 @@
                 <string>keyword.command.fxcore</string>
                 <key>match</key>
                 <!-- FXCore mnemonics plus TOON keywords and inferred mnemonics -->
-                <string>(?i)\b(if|else|endif|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb)\b</string>
+                <string>(?i)\b(if|then|else|endif|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb|allpass|chorus)\b</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.control.fxcore</string>
                 <key>match</key>
+                <!-- FXCore assembler directives -->
                 <string>(?i)^\s*(\.creg|\.mreg|\.sfr|\.rn|\.equ|\.mem|\.creg|\.mreg|\.sreg)</string>
             </dict>            
             <dict>
                 <key>name</key>
                 <string>keyword.reg.cr.fxcore</string>
                 <key>match</key>
-                <!-- All Rnn up to R15 -->
+                <!-- FXCore core registers -->
+                <!-- All Rnn up to R15 plus ACC32 and FLAGS -->
                 <string>(?i)\b(r[0-9][0-5]*|acc32|flags)\b</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.reg.acc64.fxcore</string>
                 <key>match</key>
+                <!-- FXCore 64 bit regsiters -->
                 <string>(?i)\b(acc64\.u|acc64\.l|acc64\.sat|acc64)\b</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.reg.mr.fxcore</string>
                 <key>match</key>
+                <!-- FXCore memory regsiters -->
                 <!-- All MRnnn up to MR129, excluding MR128 and MR129 -->
                 <string>(?i)\b((?!mr128|mr129$)mr[0-9][0-2]?[0-9]?)\b</string>
             </dict>
@@ -41,26 +45,28 @@
                 <key>name</key>
                 <string>keyword.reg.sfr.fxcore</string>
                 <key>match</key>
-                <string>(?i)\b(in0|in1|in2|in3|out0|out1|out2|out3|pin|switch|pot0_k|pot1_k|pot2_k|pot3_k|pot4_k|pot5_k|pot0|pot1|pot2|pot3|pot4|pot5|pot0_smth|pot1_smth|pot2_smth|pot3_smth|pot4_smth|pot5_smth|lfo0_f|lfo1_f|lfo2_f|lfo3_f|ramp0_f|ramp1_f|lfo0_s|lfo0_c|lfo1_s|lfo1_c|lfo2_s|lfo2_c|lfo3_s|lfo3_c|ramp0_r|ramp1_r|maxtempo|taptempo|samplecnt|noise|bootstat|tapstkrld|tapdbrld|swdbrld|prgdbrld|oflrld|sw0db|sw1db|sw2db|sw3db|sw4db)\b</string>
+                <!-- FXCore SFRs Special Function Registers -->
+                <string>(?i)\b(in0|in1|in2|in3|out0|out1|out2|out3|pin|switch|pot0_k|pot1_k|pot2_k|pot3_k|pot4_k|pot5_k|pot0|pot1|pot2|pot3|pot4|pot5|pot0_smth|pot1_smth|pot2_smth|pot3_smth|pot4_smth|pot5_smth|lfo0_f|lfo1_f|lfo2_f|lfo3_f|ramp0_f|ramp1_f|lfo0_s|lfo0_c|lfo1_s|lfo1_c|lfo2_s|lfo2_c|lfo3_s|lfo3_c|ramp0_r|ramp1_r|maxtempo|taptempo|samplecnt|noise|bootstat|tapstkrld|tapdbrld|swdbrld|prgdbrld|oflrld|sw0db|sw1db|sw2db|sw3db|sw4db|lfo0|lfo1|lfo2|lfo3)\b</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.reg.flagbits.fxcore</string>
                 <key>match</key>
+                <!-- FXCore bit masks -->
                 <string>(?i)\b(OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|OUT3OFLO|TB20TB1|TB21TB1|TAPSTKY|NEWTT|TAPRE|TAPPE|TAPDB)\b</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.operator.cond.fxcore</string>
                 <key>match</key>
-                <!-- All conditional operators. Made ugly by need to regex-escape many of them, and XML escape others -->
+                <!-- TOON conditional operators. Made ugly by need to regex-escape many of them, and XML escape others -->
                 <string>(\=0|&amp;|&gt;=0|&lt;0|\!\=0|&lt;&gt;0|\!\=acc32.sign)</string>
             </dict>
             <dict>
                 <key>name</key>
                 <string>keyword.operator.math.fxcore</string>
                 <key>match</key>
-                <!-- All math Made ugly by need to regex-escape many of them, and XML escape others -->
+                <!-- All math made ugly by need to regex-escape many of them, and XML escape others -->
                 <!-- * and / are esp ugly because they are operators and part of block /*comments*/ -->
                 <string>(\+|\-|\=|(?&lt;!\/)\*(?!\/)|(?&lt;!\*)(?&lt;!\/)\/(?!\/)(?!\*)|\^|&amp;)</string>
             </dict>
@@ -68,7 +74,7 @@
                 <key>name</key>
                 <string>keyword.brackets.fxcore</string>
                 <key>match</key>
-                <!-- Match all brakets including indirect absolute memory reference. -->
+                <!-- Match all brakets including TOON indirect absolute memory reference. -->
                 <string>(\[|\]|\(|\)|\)|\@\()</string>
             </dict>            
             <dict>

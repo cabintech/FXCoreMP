@@ -509,7 +509,9 @@ public class FXCoreMPMain {
 								String t = stmt.getText();
 								if ((t.length() > 0) && !t.startsWith(".") && !t.endsWith(":") && !t.equalsIgnoreCase("endif")) { // Count non-empty, non-directive, non-label-only lines
 									//System.out.println("PC "+pc+": "+t);
-									pc++;
+									// Number of physical lines is presumed to be number of FXCore instructions
+									// Currently only the 'allpass' TOON statement produces > 1 instruction
+									pc = pc + 1 + (int)s.chars().filter(ch -> ch=='\n').count();
 								}
 							}
 						} else {

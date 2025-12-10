@@ -1,6 +1,4 @@
-/bin
-/build/bin
-/test/bin
+bin/
 /test/Libraries
 
 

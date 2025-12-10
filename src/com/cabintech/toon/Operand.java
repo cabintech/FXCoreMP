@@ -1,7 +1,5 @@
 package com.cabintech.toon;
 
-import java.util.Map;
-
 import com.cabintech.utils.Util;
 
 /**
@@ -24,6 +22,7 @@ public class Operand {
 	private boolean isModLower = false; 		// Has ".L" postfix modifier
 	private boolean isModSat = false; 			// Has ".SAT" postfix modifier
 	private boolean isAcc32 = false;			// This operand is ACC32
+	private boolean isAcc32R15 = false;			// This operand is ACC32,R15
 	private boolean isAcc64 = false;			// This operand is ACC64
 	private boolean isCR = false;				// This operand is a core register (Rnn, ACC32, FLAGS). Does not include ACC64.
 	private boolean isMR = false;				// This operand is a memory register (MRnnn)
@@ -31,7 +30,7 @@ public class Operand {
 
 	private boolean isSFR = false;
 
-	public Operand(String text, Map<String,String> rnMap) {
+	public Operand(String text) {
 		// Examine the text and determine any special operand syntax
 		this.text = text; // Preserve original text as-is
 		opText = text.toUpperCase(); // By default, operand is the original text
@@ -73,18 +72,29 @@ public class Operand {
 		}
 		
 		// See if the operand is a renamed (.rn) symbol
-		if (rnMap.containsKey(opText)) {
-			resolvedName = rnMap.get(opText); // Translate any renamed (.rn) symbol
+		if (Toon.rnMap.containsKey(opText)) {
+			resolvedName = Toon.rnMap.get(opText); // Translate any renamed (.rn) symbol
 		}
 		
 		// Determine if operand is a register type (using resolved name)
 		String rn = getResolvedName();
 		isMR = rn.matches("MR[0-9]+");
-		isCR = rn.equals("ACC32") || rn.matches("R[0-9]+") || rn.equals("FLAGS");
+		isCR = rn.equals("ACC32") || rn.matches("R[0-9]+") || rn.equals("FLAGS") || rn.equals("ACC32,R15");
 		isAcc32 = rn.equals("ACC32");
+		isAcc32R15 = rn.equals("ACC32,R15");
 		isAcc64 = rn.equals("ACC64");
 		isSFR = Toon.SrfNameSet.contains(rn.toLowerCase());
 		
+	}
+	
+	public static String getType(String op) {
+		op = op.toUpperCase();
+		String rn = Toon.rnMap.containsKey(op) ? Toon.rnMap.get(op) : op;
+		if (rn.matches("MR[0-9]+")) return "mr";
+		if (rn.equals("ACC32") || rn.matches("R[0-9]+") || rn.equals("FLAGS")) return "cr";
+		if (rn.equals("ACC64")) return "acc64";
+		if (Toon.SrfNameSet.contains(rn.toLowerCase())) return "sfr";
+		return "";
 	}
 	
 	/**
@@ -129,7 +139,7 @@ public class Operand {
 	}
 	
 	/**
-	 * Returns the operand text with all indicators and modifiers removed
+	 * Returns the operand text with all indicators and modifiers removed, folded to upper case.
 	 * @return
 	 */
 	public String getOpText() {
@@ -201,11 +211,21 @@ public class Operand {
 	}
 
 	/**
-	 * Returns true if this operand is ACC32
+	 * Returns true if this operand is (only) ACC32. Is false for any
+	 * other value including 'ACC32,R15'.
 	 * @return
 	 */
 	public boolean isAcc32() {
 		return isAcc32;
+	}
+
+	/**
+	 * Returns true if this operand is (only) 'ACC32,R15'). This returns
+	 * false for any other values including 'ACC32'.
+	 * @return
+	 */
+	public boolean isAcc32R15() {
+		return isAcc32R15;
 	}
 
 	/**
