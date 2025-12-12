@@ -11,6 +11,9 @@
 
 .mem buffer 4000
 
+$setenv buildtype=dev		; Conditional inclusion
+$set includedebug=no 		; Test legacy syntax
+
 ; Basic assignment
 r0 = r1		; cpy_cc (inferred)
 r0 = mr100	; cpy_cm (inferred)
@@ -359,6 +362,29 @@ acc32 = acc32 xor eighthsTable_n
 acc32 = acc32 add 3
 r1 = [acc32]
 ; r1 now has the desired eighth's value
+
+;-----------------------------------
+; Conditional compilation
+;-----------------------------------
+
+$ifenv nonexistantenv = anything
+	; this code should never be included, force an assembly error
+	junk junk junk
+$endenv
+
+$ifenv buildtype=dev
+	; this code should always be included, check for this comment in the output source code
+$endenv
+
+$ifenv (includedebug!=no) ; Legacy syntax with parens
+	; This should never be included
+	junk junk junk
+$endenv
+
+$if(includedebug=no) ; Legacy syntax with IF and parens
+	; Testing legacy syntax, this comment should appear in the output source code
+$endenv
+
 
 ;-----------------------------------
 ; _log built in function

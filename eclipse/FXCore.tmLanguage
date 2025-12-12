@@ -95,7 +95,7 @@
                 <key>name</key>
                 <string>macro.defn.fxcore</string>
                 <key>match</key>
-                <string>(?i)(\$macro|\$endmacro|\$include|\$set|\$if|\$endif)\b</string>
+                <string>(?i)(\$macro|\$endmacro|\$include|\$set|\$setenv|\$if|\$ifenv|\$endif)|\$endenv\b</string>
             </dict>
             <dict>
                 <key>name</key>

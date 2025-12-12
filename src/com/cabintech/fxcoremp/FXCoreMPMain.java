@@ -86,6 +86,7 @@ import com.cabintech.toon.SyntaxException;
 import com.cabintech.toon.Toon;
 import com.cabintech.utils.SafeMap;
 import com.cabintech.utils.Util;
+import com.cabintech.utils.Util.FirstAndRemainder;
 
 /**
  * Pre-process FXCore source code before running it through the CPP (C preprocessor).
@@ -109,15 +110,15 @@ public class FXCoreMPMain {
 	
 	public static File srcFile = null;
 	public static File outFile = null;
-
-
+	
 	public FXCoreMPMain() {
 		// TODO Auto-generated constructor stub
 	}
 	
 	/**
 	 * Pass 1 processes all $include and $macro definition statements and returns the input
-	 * file with all $include files embedded, and all $macro definitions removed.
+	 * file with all $include files embedded, and all $macro definitions removed. Also processes
+	 * $setenv and $ifenv conditional code inclusion.
 	 * @param inFile
 	 * @param writer
 	 * @param includedFiles
@@ -157,7 +158,9 @@ public class FXCoreMPMain {
 				lineNum++;
 				SourceContext.atLine(lineNum);
 				Stmt stmt = new Stmt(inLine, lineNum, inFile.getName());
-				String stmtText = stmt.getText().replaceAll("\t"," ").trim(); // Comments removed, tabs converted to spaces, trimmed
+				
+				// Parse out the first word (and remainder) with tabs converted to blanks
+				FirstAndRemainder parsed = Util.getFirstAndRemainder(stmt.getText().replaceAll("\t"," "));
 				
 				// If we are in a multiline comment, just output it and skip all processing. This takes
 				// precedence over all other source code processing.
@@ -177,7 +180,7 @@ public class FXCoreMPMain {
 				// IF processing, precludes all other except block comments
 				//-------------------------------------------------------------------
 				
-				else if (stmtText.startsWith("$endif")) { // End of a $if condition
+				else if (parsed.firstWord().equals("$endenv") || parsed.firstWord().equals("$endif")) { // '$endif' is legacy, keeping for backward compatibility
 					inIf = false;
 					omitOutput = true; // Nothing to output
 				}
@@ -186,15 +189,18 @@ public class FXCoreMPMain {
 					omitOutput = true; // Skip lines in FALSE $if block
 				}
 				
-				else if (stmtText.startsWith("$if(")) {
-					// Condition section '$if(envname=xxx)'
-					if (inIf) throw new SyntaxException("Nested $if statements are not supported.", stmt);
+				else if (parsed.firstWord().equals("$ifenv") || parsed.firstWord().equals("$if")) { // '$if' is legacy, keeping for backward compatibility
+					// Condition section '$ifenv envname=xxx'
+					if (inIf) throw new SyntaxException("Nested $ifenv statements are not supported.", stmt);
 					
-					int endParen = stmtText.indexOf(')');
-					if (endParen<0) throw new SyntaxException("Missing closing paren of $if statement.", stmt);
-					String conditionExp = Util.jsSubstring(stmtText, 4, endParen).trim();
+					// Remove parens (legacy syntax) if present
+					String conditionExp = parsed.remainder();
+					if (conditionExp.startsWith("(") && conditionExp.endsWith(")")) {
+						conditionExp = Util.jsSubstring(conditionExp, 1, conditionExp.length()-1);
+					}
+					
 					String[] expParts = Util.split(conditionExp, "="); // Note if this is "!=" the ! stays with the left operand
-					if (expParts.length != 2) throw new SyntaxException("Invalid $if expression.", stmt);
+					if (expParts.length != 2) throw new SyntaxException("Invalid $ifenv expression.", stmt);
 					boolean operator = true;
 					if (expParts[0].endsWith("!")) {
 						operator = false;
@@ -202,7 +208,7 @@ public class FXCoreMPMain {
 					}
 					
 					inIf = true;
-					ifCondition = envMap.getStr(expParts[0].toLowerCase()).equalsIgnoreCase(expParts[1]); // TRUE if expression matches env setting
+					ifCondition = envMap.getStr(expParts[0].toLowerCase().trim()).equalsIgnoreCase(expParts[1].trim()); // TRUE if expression matches env setting
 					if (!operator) {
 						ifCondition = !ifCondition; // Invert for "!=" operator
 					}
@@ -213,11 +219,12 @@ public class FXCoreMPMain {
 				// $include
 				//-----------------------------------------
 				
-				else if (stmtText.startsWith("$include ")) {
-					if (stmtText.length() < 10) {
+				else if (parsed.firstWord().equals("$include")) {
+					String incFileName = parsed.remainder().replace("\"", "");
+					if (incFileName.length() == 0) {
 						throw new SyntaxException("Invalid $include statement, no file specified.", stmt);
 					}
-					String incFileName = stmtText.substring(9).replace("\"", "").trim();
+					
 					if (!includedFiles.contains(incFileName)) { // Only include a file once
 						// Recursive call to process the #include'd file
 						includedFiles.add(incFileName);
@@ -233,7 +240,7 @@ public class FXCoreMPMain {
 				// Macro definition processing
 				//-------------------------------------------------------------------
 				
-				else if (inDefine && stmtText.startsWith("$endmacro")) {
+				else if (inDefine && parsed.firstWord().equals("$endmacro")) {
 					Macro m = new Macro(macroLines);
 					String macroName = m.getName();
 					if (macroMap.containsKey(macroName)) {
@@ -256,8 +263,8 @@ public class FXCoreMPMain {
 					omitOutput = true; // Nothing to output until end of multiline
 				}
 				
-				else if (stmtText.startsWith("$macro ")) { // Start of macro definition
-					if (stmtText.endsWith("++")) { 
+				else if (parsed.firstWord().equals("$macro")) { // Start of macro definition
+					if (parsed.remainder().endsWith("++")) { 
 						// Start of multi-line macro definition
 						macroLines.clear();
 						inDefine = true;
@@ -282,12 +289,11 @@ public class FXCoreMPMain {
 				//-----------------------------------------
 				// $set
 				//-----------------------------------------
-				else if (stmtText.startsWith("$set ")) { // Set env value
+				else if (parsed.firstWord().equals("$setenv") || parsed.firstWord().equals("$set")) { // '$set' is legacy, keeping for backward compatibility
 					// Expected format: $set env-var-name=value
-					String expr = Util.jsSubstring(stmtText, 5);
-					String parts[] = Util.split(expr, "=");
+					String parts[] = Util.split(parsed.remainder(), "=");
 					if (parts.length != 2) {
-						throw new SyntaxException("Set statement invalid expression syntax in '"+stmtText+"'.", stmt);
+						throw new SyntaxException("$setenv statement invalid expression syntax", stmt);
 					}
 					envMap.put(parts[0].trim().toLowerCase(), parts[1].trim()); // Store (or override) in env map
 					omitOutput = true; // Do not output the $set statement

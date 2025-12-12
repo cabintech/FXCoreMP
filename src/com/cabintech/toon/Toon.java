@@ -523,7 +523,7 @@ public class Toon {
 			// Implement IF/ELSE/ENDIF constructs (https://github.com/cabintech/FXCoreMP/issues/12)
 			
 			if ((tokenCnt == 4) || // No keyword or label, default is same as THEN keyword
-				((tokenCnt > 4) && tokenList[4].toLowerCase().equals("then"))) {
+					((tokenCnt > 4) && tokenList[4].toLowerCase().equals("then"))) {
 				
 				// Start of an IF block "if <core-reg> <cond> 0 then" (eg. execute following code if the condition is TRUE, branch if FALSE)
 				
