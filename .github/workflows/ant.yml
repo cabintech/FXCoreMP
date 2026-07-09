@@ -3,14 +3,13 @@
 
 name: Java CI
 
-# Trigger this workflow on any push to MAIN branch and anytime a new release is created. The install
-# artifact will be uploaded to the release page as a zip file. The release then needs to be manually 
-# published to make the artifact available for download.
+# Trigger this workflow on any push to MAIN branch and anytime a new release is published. The install
+# artifact will be uploaded to the release page as a zip file. 
 on:
   push:
     branches: [ "main" ]
   release:
-    types: [created]
+    types: [published]
 
 defaults:
   run:
