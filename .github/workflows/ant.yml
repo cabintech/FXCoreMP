@@ -3,10 +3,14 @@
 
 name: Java CI
 
-# Trigger this workflow on any push to MAIN branch
+# Trigger this workflow on any push to MAIN branch and anytime a new release is created. The install
+# artifact will be uploaded to the release page as a zip file. The release then needs to be manually 
+# published to make the artifact available for download.
 on:
   push:
     branches: [ "main" ]
+  release:
+    types: [created]
 
 defaults:
   run:
@@ -54,7 +58,7 @@ jobs:
         cp ../build/*.cmd ../bin
         cp ../test/SamplePgm.fxc ../samples
         
-    - name: Upload old
+    - name: Upload install artifact
       uses: actions/upload-artifact@v4
       with:
         name: install # Artifact will be zip of PATH files as <name>.zip
@@ -64,16 +68,4 @@ jobs:
           notepadpp/
           eclipse/
         if-no-files-found: error
-      
-    - name: Upload old
-      if: false
-      uses: actions/upload-artifact@v4
-      with:
-        name: install # Artifact will be zip of PATH files as <name>.zip
-        path: |
-          build/jar/FXCoreMP.jar 
-          build/*.cmd 
-          eclipse/ 
-          notepadpp/ 
-          test/SamplePgm.fxc
-        if-no-files-found: error
+
