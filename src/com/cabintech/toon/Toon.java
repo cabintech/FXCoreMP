@@ -78,11 +78,11 @@ public class Toon {
 	);
 	
 	/**
-	 * Operations with 2 operands
+	 * FXCoe mnemonics with 2 operands
 	 */
 	private Set<String> ToonableOpsSet = Set.of(
 			"addi",
-			"add",		
+			"add",	
 			"adds",		
 			"addsi",
 			"sub",
@@ -141,27 +141,39 @@ public class Toon {
 	private Set<String> Ops2ArgAcc32Set = Set.of(
 			"addi",
 			"add",		// Synthetic
+			"+",		// Synthetic
 			"adds",		// Synthetic
 			"addsi",
+			"++",		// Synthetic saturating add
 			"sub",
+			"-",		// Synthetic
 			"subs",
+			"--",		// Synthetic saturating signed subtract
 			"sl",		// Synthetic
 			"slr",
+			"<<",		// Synthetic logical shift left
 			"sls",
 			"slsr",
+			"<<<",		// Synthetic saturating shift left
 			"sr",		// Synthetic
 			"srr",
+			">>",		// Synthetic logical shift right
 			"sra",
 			"srar",
+			">>>",		// Synthetic arithmetic (sign extending) shift right
 			"or",		// Synthetic
 			"ori",
+			"|",		// Synthetic
 			"and",		// Synthetic
 			"andi",
+			"&",		// Synthetic
 			"xor",		// Synthetic
 			"xori",
+			"^",		// Synthetic
 			"multrr",
 			"multri",
 			"mult",		// Synthetic
+			"*",		// Synthetic
 			"allpass"	// Synthetic
 			);
 	
@@ -515,85 +527,145 @@ public class Toon {
 				tokenCnt = tList.size();
 			}
 			
-			String cond = CondJmpExpr.get(condToken); // Lookup the condition token
+			String cond = CondJmpExpr.get(condToken); // Lookup the condition token FXCore branch mnemonic
 			if (cond == null) {
 				throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
 			}
 			
 			// Implement IF/ELSE/ENDIF constructs (https://github.com/cabintech/FXCoreMP/issues/12)
 			
-			if ((tokenCnt == 4) || // No keyword or label, default is same as THEN keyword
-					((tokenCnt > 4) && tokenList[4].toLowerCase().equals("then"))) {
+//			if ((tokenCnt == 4) || // No keyword or label, default is same as THEN keyword
+//					((tokenCnt > 4) && tokenList[4].toLowerCase().equals("then"))) {
+			
+			//--------------------------------------------------------------------------------------------------------------------
+			// If statement is complex. It may be a IF <cond> GOTO which is a branch instruction that
+			// is not negated (e.g. the branch is taken when the condition is TRUE). There are 3
+			// possible forms for this:
+			//   if r6 >= 0 label
+			//   if r6 >= 0 goto label
+			//   if r6 >= 0 then goto label
+			//
+			// Or it may be a full IF ... THEN ... ELSE ... ENDIF block, which uses the negated condition
+			// (branch taken when condition is FALSE). There are 4 possible forms for this:
+			//   if r6 >= 0 (tHEN block implicitly or explicitly starts on next line)
+			//	 if r6 >= 0 then (THEN block starts on next line)
+			//   if r6 >= 0 then statement (special single line THEN statement, no ENDIF). Note 'statement' is always at least 2 tokens.
+			//--------------------------------------------------------------------------------------------------------------------
+			
+			// First determine if this is a simple GOTO or a full IF block. If it is a GOTO we
+			// find the goto label (which is also the signal that this is not a full IF block).
+			
+			String gotoLabel = null; // Assume full IF block
+			switch (tokenCnt) {
+				case 4:
+					break; // No statement or label, default is same as THEN keyword and block starts on following line
+				case 5:
+					// Either a label or a THEN keyword
+					if (!tokenList[4].toLowerCase().equals("then")) {
+						gotoLabel = tokenList[4];
+					}
+					break;
+				case 6:
+					// Only valid case is ... goto <label> 
+					if (tokenList[4].toLowerCase().equals("goto")) {
+						gotoLabel = tokenList[5];
+					}
+					else {
+						throw new SyntaxException("Invalid IF statement syntax, unexpected token '"+tokenList[5]+"'.", stmt);
+					}
+					break;
+				case 7:
+					// Possible case is ... THEN GOTO <label>
+					if (tokenList[4].toLowerCase().equals("then") && tokenList[5].toLowerCase().equals("goto")) {
+						gotoLabel = tokenList[6];
+					}
+					break;
+				default:
+					break; // More than 7 tokens, must be a full IF block with THEN and possibly ELSE
+			}
+			
+			// If this is just a GOTO, generate the appropriate (positive) branch instruction
+			if (gotoLabel != null) {
 				
-				// Start of an IF block "if <core-reg> <cond> 0 then" (eg. execute following code if the condition is TRUE, branch if FALSE)
+				//TODO: Write proper lexical tokenizer, this works on all valid conditions but fails to
+				// flag some invalid ones like "if r6 <=0 0 goto xxx" and cannot parse a single token
+				// like "if r6<0 goto xxx"
 				
-				cond = CondJmpNegate.get(condToken); // Lookup the NEGATION condition token
-				if (cond == null) {
-					throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
-				}
-				
+				Operand target = new Operand(tokenList[1]);
+				if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR.", stmt);
+				if (!target.isPlain()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' cannot have modifiers.", stmt);
 				if (tokenList[3].equalsIgnoreCase("acc32.sign")) {
 					if (!cond.equals("jnz")) {
-						throw new SyntaxException("Invalid IF statement condition, the only test allowed for acc32.sign is '='.", stmt);
+						throw new SyntaxException("Invalid IF statement, the only ACC32.SIGN test allowed for IF...GOTO is '!='.", stmt);
 					}
 					cond = "jzc"; // Special opcode for this test-and-branch
 				}
 
 				
-				// Generate target labels
-				String elseLabel = "_else_"+ifCounter;
-				String endLabel = "_endif_"+ifCounter;
-				ifCounter++;
+				// Generate FXCore assembler format (use original symbol, of the register for readability of the generated code)
+				return rebuildStatement(cond + SEP1 + target.getText() + "," + gotoLabel, stmt, null, 0);
+			}
+			
+			// This is a full IF ... THEN ... [ELSE ...] ENDIF block
 				
-				// Create a record of this IF statement
-				IfStmtRecord ifRecord = new IfStmtRecord(stmt, condToken, elseLabel, endLabel);
-				
-				// Put it on a stack of nested IF statements
-				ifStmtStack.add(ifRecord);
-				
-				// Generate conditional branch to ELSE target (which will be same as ENDIF target if no ELSE is supplied)
-				String rebuild = rebuildStatement(cond + SEP1 + tokenList[1] + "," + elseLabel, stmt, null, 0);
-				
-				// If there is a statement after THEN, make recursive call to evaluate it and return it
-				// with the conditional branch (as a 2nd line).
-				if (tokenCnt > 5) {
-					// Recursive call to evaluate the statement after THEN and translate from TOON to ASM
-					String afterThen = String.join(" ",Arrays.copyOfRange(tokenList, 5, tokenList.length));
-					String asmText = toonToAsm(new Stmt(afterThen, stmt.getLineNum(), stmt.getFileName(), true));
-					rebuild = rebuild + "\n" + rebuildStatement(asmText, stmt, null, 0);
+			if (tokenCnt > 4) {
+				// THEN is optional
+				if (!tokenList[4].toLowerCase().equals("then")) {
+					// Insert a THEN token for uniform processing below
+					List<String> tList = new ArrayList<>(Arrays.asList(tokenList));
+					tList.add(4, "then");
+					tokenList = tList.toArray(new String[0]);
+					tokenCnt = tList.size();
 				}
-				
-				return rebuild;
+			}
 
+			// This for uses the NEGATED condition for the branch instruction
+			cond = CondJmpNegate.get(condToken); // Lookup the NEGATION condition token
+			if (cond == null) {
+				throw new SyntaxException("Invalid IF statement syntax, condition '"+tokenList[2]+"' not recognized.", stmt);
 			}
 			
-			
-			// 'IF <core-reg> <cond> <label>'
-			
-			//TODO: Write proper lexical tokenizer, this works on all valid conditions but fails to
-			// flag some invalid ones like "if r6 <=0 0 goto xxx" and cannot parse a single token
-			// like "if r6<0 goto xxx"
-			
-			// If next symbol is "0", ignore it
-			int labelIndex = 3;  // Index of GOTO label
-			if (tokenList[labelIndex].equals("0")) { // Skip over "0" if present, e.g. "acc32 >= 0 goto xxx"
-				labelIndex++;
+			if (tokenList[3].equalsIgnoreCase("acc32.sign")) {
+				if (!cond.equals("jnz")) {
+					throw new SyntaxException("Invalid IF statement, the only ACC32.SIGN test allowed for IF...THEN blocks is '='.", stmt);
+				}
+				cond = "jzc"; // Special opcode for this test-and-branch
 			}
-			else if (tokenList[labelIndex].equalsIgnoreCase("acc32.sign")) { // Skip over "acc32.sign" if present, e.g. "r0 != acc32.sign goto xxx"
-				labelIndex++;
-				cond = "jzc"; // Different opcode
-			} 
+
 			
-			Operand target = new Operand(tokenList[1]);
-			if (!target.isCR()) throw new SyntaxException("Invalid IF statement syntax, operand '"+tokenList[1]+"' must be a CR.", stmt);
+			// Generate target labels
+			String elseLabel = "_else_"+ifCounter;
+			String endLabel = "_endif_"+ifCounter;
+			ifCounter++;
 			
-			// Skip optional 'goto' token
-			if (tokenList[labelIndex].equalsIgnoreCase("goto")) {
-				labelIndex++; // Label is next token after GOTO
+			// Create a record of this IF statement
+			IfStmtRecord ifRecord = new IfStmtRecord(stmt, condToken, elseLabel, endLabel);
+			
+			// Put it on a stack of nested IF statements
+			ifStmtStack.add(ifRecord);
+			
+			// Generate conditional branch to ELSE target (which will be same as ENDIF target if no ELSE is supplied)
+			String rebuild = rebuildStatement(cond + SEP1 + tokenList[1] + "," + elseLabel, stmt, null, 0);
+			
+			// If there is a statement after THEN, make recursive call to evaluate it and return it
+			// with the conditional branch (as a 2nd line). Then automatically close the IF
+			// statement.
+			if (tokenCnt > 5) {
+				// Recursive call to evaluate the statement after THEN and translate from TOON to ASM
+				String afterThen = String.join(" ",Arrays.copyOfRange(tokenList, 5, tokenList.length));
+				String asmText = toonToAsm(new Stmt(afterThen, stmt.getLineNum(), stmt.getFileName(), true));
+				rebuild = rebuild + "\n" 
+						+ rebuildStatement(asmText, stmt, null, 0);
+				
+				// Now complete the IF statement by generating the ELSE target branch label and removing it from the nesting stack
+				// (same logic as ENDIF processing below)
+				rebuild = rebuild + "\n" 
+						+ rebuildStatement(ifRecord.elseLabel() + ":" , stmt, null, 0);
+				ifStmtStack.removeLast();
 			}
 			
-			// Generate FXCore assembler format (use original symbol, if any, for the register) for readability of the generated code
-			return rebuildStatement(cond + SEP1 + tokenList[1] + "," + tokenList[labelIndex], stmt, tokenList, labelIndex+1);
+			return rebuild;
+			
 		}
 		
 		// THEN clause of an IF/THEN/ELSE. This is a noop, it has no function. We do allow a statement after the THEN, e.g.
@@ -820,7 +892,7 @@ public class Toon {
 				// acc32,r15	= acc32 allpass <cr-coeff>, (addr), (addr#) ; Generate APRA, APRB
 				// acc32,r15	= acc32 allpass <cr-coeff>, (<cr-addr-head>), (<cr-addr-tail>) ; Generate APRRA, APRRB
 				// acc32,r15	= acc32 allpass <cr-coeff>, <mreg>) ; Generate APMA, APMB
-				if (tokenList[3].toLowerCase().equals("allpass")) {
+				if (func.equals("allpass")) {
 					if (left.isAcc32()) {
 						// Strict enforcement of TOON semantics, ALLPASS targets both ACC32 and R15
 						throw new SyntaxException("ALLPASS will target R15 as well as ACC32. Left side of assignment must be 'ACC32,R15'.", stmt);
@@ -1231,13 +1303,26 @@ public class Toon {
 		// For some operations we allow a generic function to act on an immediate
 		// value or a register and we translate to the appropriate instruction.
 		if (!op2.isReg()) {
+			// Right side is immediate value
 			switch (f) {
+			case "+":		f = "addi"; break; // unsigned add
 			case "add": 	f = "addi"; break;
+			case "++":		f = "addsi"; break; // signed add
 			case "adds": 	f = "addsi"; break;
+			case "|" :		f = "ori"; break;
 			case "or":		f = "ori"; break;
+			case "&" :		f = "andi"; break;
 			case "and":		f = "andi"; break;
+			case "^" :		f = "xori"; break;
 			case "xor":		f = "xori"; break;
 			case "mult":	f = "multri"; break; // Synthetic instruction for consistency
+			case "*":		f = "multri"; break;
+			case "sl": 		f = "sl"; break; // logical left shift
+			case "<<":		f = "sl"; break;
+			case "<<<":		f = "sls"; break; // saturating left shift
+			case "sr": 		f = "sr"; break; // logical right shift
+			case ">>":		f = "sr"; break;
+			case ">>>":		f = "sra"; break; // arithmetic right shift
 			// 64 bit
 			case "macr":	f = "macri"; break; // Synthetic instruction for consistency
 			case "machr":	f = "machri"; break;
@@ -1254,16 +1339,28 @@ public class Toon {
 			}
 		}
 		else {
-			// Infer
+			// Right side is a register
 			switch (f) {
-			case "mult": f = "multrr"; break;
-			case "sl": 	f = "slr"; break;
-			case "sls": f = "slsr"; break;
-			case "sr": 	f = "srr"; break;
-			case "sra": f = "srar"; break;
-			case "macd": f = "macrd"; break;
-			case "macr": f = "macrr"; break;
-			case "machd": f = "machrd"; break;
+			case "+":		f = "add"; break; // unsigned add
+			case "++":		f = "adds"; break; // signed add
+			case "-":		f = "sub"; break; // unsigned sub
+			case "--":		f = "subs"; break; // signed sub
+			case "*":		f = "multrr"; break;
+			case "mult": 	f = "multrr"; break;
+			case "<<":		f = "slr"; break; // logical left shift
+			case "sl": 		f = "slr"; break;
+			case "<<<":		f = "slsr"; break; // saturating left shift
+			case "sls": 	f = "slsr"; break;
+			case ">>":		f = "srr"; break; // logical right shift
+			case "sr": 		f = "srr"; break;
+			case ">>>":		f = "srar"; break; // arithmetic right shift
+			case "sra": 	f = "srar"; break;
+			case "|":		f = "or"; break; // bitwise OR
+			case "&":		f = "and"; break; // bitwise AND
+			case "^":		f = "xor"; break; // bitwise XOR
+			case "macd": 	f = "macrd"; break;
+			case "macr": 	f = "macrr"; break;
+			case "machd": 	f = "machrd"; break;
 			case "machr":	f = "machrr"; break;
 			}
 			// 2nd operand is a register. If an immediate form was specified, this is an error.

@@ -3,13 +3,21 @@
 <plist version="1.0">
     <dict>
         <key>patterns</key>
+        <!-- Test regexes at https://regex101.com/ -->
         <array>
             <dict>
                 <key>name</key>
                 <string>keyword.command.fxcore</string>
                 <key>match</key>
                 <!-- FXCore mnemonics plus TOON keywords and inferred mnemonics -->
-                <string>(?i)\b(if|then|else|endif|goto|blah|mult|macr|macd|machr|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machrd|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb|allpass|chorus)\b</string>
+                <string>(?i)\b(if|then|else|endif|goto|mult|macr|macd|machd|machr|machrd|gez|neg|nz|z|abs|clracc64|addi|add|adds|addsi|sub|subs|sl|slr|sls|slsr|sr|srr|sra|srar|macrr|macri|macrd|macid|machrr|machri|machid|multrr|multri|neg|log2|exp2|cpy_cc|cpy_cm|cpy_cs|cpy_mc|cpy_sc|cpy_cmx|rdacc64u|rdacc64l|ldacc64u|ldacc64l|rddel|wrdel|rddelx|wrdelx|rddirx|wrdirx|sat64|wrdld|inv|or|ori|and|andi|xor|xori|jgez|jneg|jnz|jz|jzc|jmp|apa|apb|apra|aprb|apma|apmb|chr|pitch|set|interp|aprra|aprrb|allpass|chorus)\b</string>
+            </dict>
+            <dict>
+                <key>name</key>
+                <string>keyword.command.fxcore</string>
+                <key>match</key>
+                <!-- TOON inferred mnemonics that are symboles (must have leading and trailing blanks) -->
+                <string>(?i)\b( \+{1,2} | \-{1,2} | \&lt;{2,3} | \&gt;{2,3} | \| | \&amp; | \^ | \* )\b</string>
             </dict>
             <dict>
                 <key>name</key>
@@ -61,14 +69,6 @@
                 <key>match</key>
                 <!-- TOON conditional operators. Made ugly by need to regex-escape many of them, and XML escape others -->
                 <string>(\=0|&amp;|&gt;=0|&lt;0|\!\=0|&lt;&gt;0|\!\=acc32.sign)</string>
-            </dict>
-            <dict>
-                <key>name</key>
-                <string>keyword.operator.math.fxcore</string>
-                <key>match</key>
-                <!-- All math made ugly by need to regex-escape many of them, and XML escape others -->
-                <!-- * and / are esp ugly because they are operators and part of block /*comments*/ -->
-                <string>(\+|\-|\=|(?&lt;!\/)\*(?!\/)|(?&lt;!\*)(?&lt;!\/)\/(?!\/)(?!\*)|\^|&amp;)</string>
             </dict>
             <dict>
                 <key>name</key>

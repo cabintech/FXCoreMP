@@ -11,6 +11,8 @@ package com.cabintech.fxcoremp;
 //       Added optional TOON statement syntax (Target Of Operation Notation)
 
 public interface Constants {
+	
+	public static final String VERSION = "0"; // Replaced during github build with the current version number
 
 	public static final int DIR_ANY = 0;
 	public static final int DIR_IN = 1;

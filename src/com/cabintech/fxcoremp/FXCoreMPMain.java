@@ -94,7 +94,7 @@ import com.cabintech.utils.Util.FirstAndRemainder;
  *
  */
 
-public class FXCoreMPMain {
+public class FXCoreMPMain implements Constants {
 	
 	private static File sourceDir = null;
 	
@@ -393,6 +393,16 @@ public class FXCoreMPMain {
 				continue;
 			}
 			
+			if (arg.equalsIgnoreCase("--version") || arg.equalsIgnoreCase("--help") ) { // Show version and exit
+				if (VERSION.equals("0")) {
+					System.out.println("FXCoreMP version is unknown (this is not an official release build)");
+				}
+				else {
+					System.out.println("FXCoreMP version: "+VERSION);
+				}
+				System.exit(0);
+			}
+			
 			if (arg.startsWith("-E")) { // Env variable for $if
 				String v = Util.jsSubstring(arg, 2);
 				if (v.length()==0) continue; // Skip empty -E arg
@@ -501,7 +511,7 @@ public class FXCoreMPMain {
 					try {
 						if (toonModeNormal) {
 							// Create a Stmt so any errors can have context (e.g. line number, etc)
-							Stmt stmt = new Stmt(s, lineCnt, srcFile.getAbsolutePath());
+							Stmt stmt = new Stmt(s, lineCnt, outFile.getAbsolutePath());
 							if (stmt.isBlockCommentEnd()) {
 								inBlockComment = false;
 							}
@@ -510,10 +520,11 @@ public class FXCoreMPMain {
 								inBlockComment = true;
 							}
 							if (!inBlockComment) {
-								//TODO: Improve this ad-hoc way of counting instructions. The Stmt object is probably a better place to
+								//TODO: Improve this ad-hoc way of counting instructions, it is not accurate particularly
+								// with if/then/else blocks. The Stmt object is probably a better place to
 								// know if the statement generates 0, 1, or more machine instructions.
 								String t = stmt.getText();
-								if ((t.length() > 0) && !t.startsWith(".") && !t.endsWith(":") && !t.equalsIgnoreCase("endif")) { // Count non-empty, non-directive, non-label-only lines
+								if ((t.length() > 0) && !t.startsWith(".") && !t.endsWith(":") && !t.equalsIgnoreCase("endif") && !t.equalsIgnoreCase("then")) { // Count non-empty, non-directive, non-label-only lines
 									//System.out.println("PC "+pc+": "+t);
 									// Number of physical lines is presumed to be number of FXCore instructions
 									// Currently only the 'allpass' TOON statement produces > 1 instruction

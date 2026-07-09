@@ -57,7 +57,7 @@ acc32,r15 = acc32 allpass myreg1, mr12 ; apma myreg1,mr12 ; apmb myreg1, mr12
 acc32,r15 = acc32 allpass myreg1, mr12 ; apma myreg1,mr12 ; apmb myreg1, mr12
 
 ; chorus variations
-acc32 = chorus r15, lfo1, +sin, (400) 	; chr lfo1|sin|0,400
+acc32 = chorus r15, lfo1, +sin, (400) 	; chr lfo1|sin|0,400; (one instruction only)
 acc32,r15 = chorus r2, lfo1, +sin, (400)	; cpy_cc r15,r2; chr lfo1|sin|0,400
 acc32,r15 = chorus mr27, lfo2, cos, (400)	; cpy_cm r15, mr27; chr lfo2|cos|0,400
 acc32,r15 = chorus 200, lfo3, -sin, (400)	; wrdld r15,200; chr lfo3|sin|1,400
@@ -72,54 +72,78 @@ ACC32 = exp2 r0	; exp2
 ; 32 bit logic operations
 
 ACC32 = r0 or r1	; or
+ACC32 = r0 | r1    	; or (inferred) symbol
 ACC32 = r0 ori 0x7	; ori
 ACC32 = r0 or 0x7	; ori (inferred)
+ACC32 = r0 | 0x7	; ori (inferred) symbol
 
 ACC32 = r0 and r1	; and
+ACC32 = r0 & r1    	; and (inferred) symbol
 ACC32 = r0 andi 0x7	; andi
 ACC32 = r0 and 0x7	; andi (inferred)
+ACC32 = r0 & 0x7	; andi (inferred) symbol
 
 ACC32 = r0 xor r1	; xor
+ACC32 = r0 ^ r1    	; xor (inferred) symbol
 ACC32 = r0 xori 0x7	; xori
 ACC32 = r0 xor 0x7	; xori (inferred)
+ACC32 = r0 ^ 0x7	; xori (inferred) symbol
 
-; shift left
-acc32 = r0 sl 1		; sl
+; shift left logical
+acc32 = r0 sl 0x01	; sl immediate
+acc32 = r0 << 0x01  ; sl immediate (inferred) symbol
 acc32 = r0 slr r1	; slr
 acc32 = r0 sl r1	; slr (inferred)
+acc32 = r0 << r1	; slr (inferred) symbol
 
-acc32 = r0 sls 1	; sls
+; shift left saturating
+acc32 = r0 sls 0x01	; sls
+acc32 = r0 <<< 0x01 ; sls immediate (inferred) symbol
 acc32 = r0 slsr r1	; slsr
 acc32 = r0 sls r1	; slsr (inferred)
+acc32 = r0 <<< r1	; slsr (inferred) symbol
 
-; shift right
-acc32 = r0 sr 1		; sr
+; shift right logical
+acc32 = r0 sr 0x01	; sr immediate
+acc32 = r0 >> 0x01	; sr immediate (inferred) symbol
 acc32 = r0 srr r1	; srr
 acc32 = r0 sr r1	; srr (inferred)
+acc32 = r0 >> r1	; srr (inferred) symbol
 
-acc32 = r0 sra 1	; sra
+; shift right arithmetic
+acc32 = r0 sra 0x01	; sra
+acc32 = r0 >>> 0x01 ; sra immediate (inferred) symbol
 acc32 = r0 srar r1	; srar
 acc32 = r0 sra r1	; srar (inferred)
+acc32 = r0 >>> r1	; srar (inferred) symbol
 
 ; add
 acc32 = r0 add r1		; add
+acc32 = r0 + r1 		; add (inferred) symbol
 acc32 = r0 addi 0x10 	; addi
 acc32 = r0 add 0x10 	; addi (inferred)
+acc32 = r0 + 0x10 		; addi (inferred) symbol
 
-; add signed
+; add signed and saturating
 acc32 = r0 adds r1		; adds
+acc32 = r0 ++ r1 		; adds signed saturated (inferred) symbol
 acc32 = r0 addsi 0.2 	; addsi
 acc32 = r0 adds 0.2 	; addsi (inferred)
+acc32 = r0 ++ 0.2 		; addsi (inferred) symbol
 
-; subtract
+; subtract (no immediate forms of this instruction)
 acc32 = r0 sub r1		; sub
+acc32 = r0 - r1 		; sub (inferred) symbol
 acc32 = r0 subs r1		; subs
+acc32 = r0 -- r1 		; subs signed saturated (inferred) symbol
 
 ; multiply
 acc32 = r0 multrr r1	; multrr
+acc32 = r0 * r1        	; multrr (inferred) symbol
 acc32 = r0 multri 0.4	; multri
 acc32 = r0 mult r1		; multrr (inferred)
 acc32 = r0 mult 0.4		; multri (inferred)
+acc32 = r0 * 0.4        ; multri (inferred) symbol
 
 ; 64 bit summing operations
 acc64 += r0 macrr r1		; macrr
@@ -186,15 +210,20 @@ else
 endif
 
 ; Special case of acc32.sign
+; Note IF...THEN can only use '=' for ACC32 sign comparison
 if r0 = acc32.sign
   ; Do this when the sign bits are the same
 else
   ; Do this when the sign bits are differnt
 endif
 
+; Note IF...GOTO can only use '!=' for ACC32 sign comparison
+if r2 != acc32.sign goto SignDiffLabel
+	; Do this when the sign bits are the same
+SignDiffLabel:
 
 ;-----------------------------------------------------------------------
-; IF-THEN-ELSE-ENDIF syntax variations
+; IF-THEN syntax variations, all these produce the same code
 ;-----------------------------------------------------------------------
 
 ; THEN on same line as IF 
@@ -202,9 +231,15 @@ if r0 = 0 then
   r1 = r10 ; do this when r0 is zero
 endif
 
-; THEN <stmt> on same line as IF
-if r0 = 0 then r1 = r10
+; THEN is optional
+if r0 = 0
+  r1 = r10 ; do this when r0 is zero
 endif
+
+; Special case one-line IF-THEN-stmt, no ENDIF
+if r0 = 0 then r1 = r10
+
+if r0 = 0 r1 = r10 ; THEN optional
 
 ; THEN on its own line
 if r0 = 0
@@ -217,19 +252,26 @@ if r0 = 0
   then r1 = r10
 endif
 
-; ELSE followed by <stmt>
+;-----------------------------------------------------------------------
+; IF-THEN-ELSE syntax variations, all these produce the same code
+;-----------------------------------------------------------------------
+
 if r0 = 0
   then r1 = r10
   else r1 = r11
 endif
 
-; THEN and ELSE
-if r0 = 0
-  then r1 = r10
-  r2 = r12
- else r1 = r11
-  r2 = r13
- endif
+if r0 = 0 then
+  r1 = r10
+  else r1 = r11
+endif
+
+if r0 = 0 then
+  	r1 = r10
+  else 
+  	r1 = r11
+endif
+
 
 ;-----------------------------------------------------------------------
 ; End of IF-THEN-ELSE-ENDIF
@@ -390,6 +432,4 @@ $endenv
 ; _log built in function
 ;-----------------------------------
 
-$_log(The value of the 'myname' counter expected to be 12.5. The actional value is $_count(myname,get,)) ; No source generated for _log() macro
-
-$_log(This program is using $_count(nextmr,get,) of 128 Memory Registers)
+$_log(The value of the 'myname' counter expected to be 12.5. The actional value is: $_count(myname,get,)) ; No source generated for _log() macro
