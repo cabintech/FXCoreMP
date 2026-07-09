@@ -21,6 +21,14 @@ jobs:
     - name: Clone
       uses: actions/checkout@v4 # This will checkout (clone) the repo to this build machine
       
+    - name: Inject version
+      run: |
+        # Extract the release tag (e.g., v1.2.3)
+        VERSION=${{ github.event.release.tag_name }}
+
+        # Replace a placeholder token inside the global constants file
+        sed -i "s/__VERSION__/$VERSION/g" src/com/cabintech/fxcoremp/Constants.java	        
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
