@@ -394,7 +394,7 @@ public class FXCoreMPMain implements Constants {
 			}
 			
 			if (arg.equalsIgnoreCase("--version") || arg.equalsIgnoreCase("--help") ) { // Show version and exit
-				if (VERSION.equals("0")) {
+				if (VERSION.equals("__VERSION__")) {
 					System.out.println("FXCoreMP version is unknown (this is not an official release build)");
 				}
 				else {
